@@ -15,6 +15,7 @@ class GenericTemplate:
     relation_id: An identifier for a specific relation (regardless of RelationType).
     target: A target GenericVariable.
     """
+
     source: GenericVariable
     relation_id: RelationId
     target: GenericVariable
@@ -31,16 +32,17 @@ class RelationalTemplate:
     relation: A specific Relation's type.
     target: A target Variable identifier in a RelationalTree.
     """
+
     source_id: VarId
     relation_type: RelationType
     target_id: VarId
 
     def partial_equals(
-            self,
-            other: 'RelationalTemplate',
-            source_ids: bool = False,
-            relation_types: bool = False,
-            target_ids: bool = False,
+        self,
+        other: "RelationalTemplate",
+        source_ids: bool = False,
+        relation_types: bool = False,
+        target_ids: bool = False,
     ) -> bool:
         if source_ids and self.source_id != other.source_id:
             return False
@@ -61,20 +63,21 @@ class Template:
     relation: A Relation between the Variables.
     target: A target Variable.
     """
+
     source: Variable
     relation: Relation
     target: Variable
 
     def partial_equals(
-            self,
-            other: 'Template',
-            source_ids: bool = False,
-            source_terms: bool = False,
-            relation_types: bool = False,
-            relation_descriptions: bool = False,
-            relation_surface_forms: bool = False,
-            target_ids: bool = False,
-            target_terms: bool = False,
+        self,
+        other: "Template",
+        source_ids: bool = False,
+        source_terms: bool = False,
+        relation_types: bool = False,
+        relation_descriptions: bool = False,
+        relation_surface_forms: bool = False,
+        target_ids: bool = False,
+        target_terms: bool = False,
     ) -> bool:
         if source_ids and self.source.identifier != other.source.identifier:
             return False
@@ -82,11 +85,15 @@ class Template:
             return False
         if relation_types and self.relation.type_ != other.relation.type_:
             return False
-        if relation_descriptions and \
-                self.relation.description != other.relation.description:
+        if (
+            relation_descriptions
+            and self.relation.description != other.relation.description
+        ):
             return False
-        if relation_surface_forms and \
-                self.relation.surface_form != other.relation.surface_form:
+        if (
+            relation_surface_forms
+            and self.relation.surface_form != other.relation.surface_form
+        ):
             return False
         if target_ids and self.target.identifier != other.target.identifier:
             return False

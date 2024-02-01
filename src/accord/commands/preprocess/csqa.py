@@ -58,9 +58,9 @@ def infer(resources: ResourcesConfig, cfg: CSQAConfig, c_net_cfg: ConceptNetConf
     csqa_by_type = {}
     failures = []
     for datum in tqdm(csqa_data, desc="Progress", disable=not cfg.verbose):
-        question = datum['question']
-        node_word = concept_net.format(question['question_concept'], cfg.language)
-        other_words = [choice['text'] for choice in question['choices']]
+        question = datum["question"]
+        node_word = concept_net.format(question["question_concept"], cfg.language)
+        other_words = [choice["text"] for choice in question["choices"]]
         relations = []
         for other_word in other_words:
             other_word = concept_net.format(other_word, cfg.language)
@@ -105,16 +105,16 @@ def sample(resources: ResourcesConfig, cfg: CSQAConfig):
     df_data = {}
     for relation_type, relation_data in sub_samples.items():
         for datum in relation_data:
-            df_data.setdefault('id', []).append(datum['id'])
-            df_data.setdefault('type', []).append(relation_type)
-            df_data.setdefault('concept', []).append(
-                datum['question']['question_concept']
+            df_data.setdefault("id", []).append(datum["id"])
+            df_data.setdefault("type", []).append(relation_type)
+            df_data.setdefault("concept", []).append(
+                datum["question"]["question_concept"]
             )
-            df_data.setdefault('answer', []).append(datum['answerKey'])
-            df_data.setdefault('stem', []).append(datum['question']['stem'])
-            for choice in datum['question']['choices']:
-                df_data.setdefault(choice['label'], []).append(choice['text'])
-    pd.DataFrame(df_data).to_csv(ensure_path(sampled_file), sep='\t', index=False)
+            df_data.setdefault("answer", []).append(datum["answerKey"])
+            df_data.setdefault("stem", []).append(datum["question"]["stem"])
+            for choice in datum["question"]["choices"]:
+                df_data.setdefault(choice["label"], []).append(choice["text"])
+    pd.DataFrame(df_data).to_csv(ensure_path(sampled_file), sep="\t", index=False)
 
 
 def convert(resources: ResourcesConfig, cfg: CSQAConfig):
@@ -131,7 +131,7 @@ def convert(resources: ResourcesConfig, cfg: CSQAConfig):
 
     # Convert the data from CSV text to JSONL dataclasses.
     qa_dataset = []
-    for record in load_records_csv(sampled_file, sep='\t'):
+    for record in load_records_csv(sampled_file, sep="\t"):
         # Load the appropriate pairing templates or reject QAData with no pairings.
         templates_file = os.path.join(paired_data_dir, f"{record['id']}.csv")
         if not os.path.isfile(templates_file):
@@ -140,11 +140,11 @@ def convert(resources: ResourcesConfig, cfg: CSQAConfig):
         # Convert each template's data into a ReasoningTemplate.
         templates = []
         for template in load_records_csv(templates_file):
-            placement, term = template.pop('placement'), template.pop('term')
-            if placement == 'SOURCE':
+            placement, term = template.pop("placement"), template.pop("term")
+            if placement == "SOURCE":
                 source = Variable(identifier="pairing_source", term=term)
                 target = Variable(identifier="pairing_target")
-            elif placement == 'TARGET':
+            elif placement == "TARGET":
                 source = Variable(identifier="pairing_source")
                 target = Variable(identifier="pairing_target", term=term)
             else:
@@ -153,14 +153,14 @@ def convert(resources: ResourcesConfig, cfg: CSQAConfig):
 
         # Convert all record data into a QAData object.
         qa_data = QAData(
-            identifier=record.pop('id'),
-            question=record.pop('stem'),
-            correct_answer_label=record.pop('answer'),
+            identifier=record.pop("id"),
+            question=record.pop("stem"),
+            correct_answer_label=record.pop("answer"),
             pairing_templates=templates,
             answer_choices=record,
             kwargs={
-                "concept_net_relation_type": record.pop('type'),
-                "csqa_question_concept": record.pop('concept'),
+                "concept_net_relation_type": record.pop("type"),
+                "csqa_question_concept": record.pop("concept"),
             },
         )
         qa_dataset.append(qa_data)

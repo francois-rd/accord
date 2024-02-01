@@ -45,6 +45,7 @@ class AntiFactualMethod(Enum):
        where (v, r, p) xor (p, r, v) (xor: depending on whether p is the source or
        target) is not an existing assertion.
     """
+
     ALL_RELATIONS = "ALL_RELATIONS"
     SAME_RELATION = "SAME_RELATION"
     OTHER_RELATIONS = "OTHER_RELATIONS"
@@ -53,11 +54,11 @@ class AntiFactualMethod(Enum):
 
 class ConceptNetInstantiator(Instantiator):
     def __init__(
-            self,
-            concept_net: ConceptNet,
-            language: str,
-            variant: InstantiatorVariant,
-            method: Optional[AntiFactualMethod] = None,
+        self,
+        concept_net: ConceptNet,
+        language: str,
+        variant: InstantiatorVariant,
+        method: Optional[AntiFactualMethod] = None,
     ):
         self.concept_net = concept_net
         self.language = language
@@ -115,8 +116,8 @@ class ConceptNetInstantiator(Instantiator):
 
     @staticmethod
     def _keep_matching(
-            df: pd.DataFrame,
-            partner_col: str,
-            partner_term: Term,
+        df: pd.DataFrame,
+        partner_col: str,
+        partner_term: Term,
     ) -> pd.DataFrame:
         return df.loc[df[partner_col] == partner_term]

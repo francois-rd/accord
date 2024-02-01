@@ -17,7 +17,7 @@ class ReductionOrder(Enum):
     MAINTAIN = "MAINTAIN"
     REVERSE = "REVERSE"
 
-    def __invert__(self) -> 'ReductionOrder':
+    def __invert__(self) -> "ReductionOrder":
         if self == ReductionOrder.MAINTAIN:
             return ReductionOrder.REVERSE
         elif self == ReductionOrder.REVERSE:
@@ -31,7 +31,7 @@ class Reduction:
     relation_type: RelationType
     order: ReductionOrder
 
-    def __invert__(self) -> 'Reduction':
+    def __invert__(self) -> "Reduction":
         return Reduction(self.relation_type, ~self.order)
 
 
@@ -41,10 +41,10 @@ class Reducer:
         self.permutations = {}
 
     def register(
-            self,
-            case_link: RelationalCaseLink,
-            reduction: Reduction,
-            raise_: bool = False,
+        self,
+        case_link: RelationalCaseLink,
+        reduction: Reduction,
+        raise_: bool = False,
     ):
         """
         Registers a specific RelationalCaseLink and its Reduction.
@@ -73,9 +73,9 @@ class Reducer:
             return None
 
     def reduce_templates(
-            self,
-            t1: RelationalTemplate,
-            t2: RelationalTemplate,
+        self,
+        t1: RelationalTemplate,
+        t2: RelationalTemplate,
     ) -> Optional[RelationalTemplate]:
         # Figure out which Case we are dealing with.
         case_link = RelationalCaseLink.from_templates(t1, t2)
@@ -101,18 +101,18 @@ class Reducer:
         return RelationalTemplate(first, reduction.relation_type, second)
 
     def valid_answer_ids(
-            self,
-            tree: RelationalTree,
-            pairing_template: RelationalTemplate,
-            pairing_id: VarId,
+        self,
+        tree: RelationalTree,
+        pairing_template: RelationalTemplate,
+        pairing_id: VarId,
     ) -> List[VarId]:
         return list(self._answer_ids(tree.templates, pairing_template, pairing_id))
 
     def _answer_ids(
-            self,
-            templates: List[RelationalTemplate],
-            pairing_template: RelationalTemplate,
-            pairing_id: VarId,
+        self,
+        templates: List[RelationalTemplate],
+        pairing_template: RelationalTemplate,
+        pairing_id: VarId,
     ) -> Iterable[VarId]:
         if pairing_template in templates:
             if pairing_id == pairing_template.source_id:
@@ -132,9 +132,9 @@ class Reducer:
 
     @staticmethod
     def _is_valid_match(
-            test_template: RelationalTemplate,
-            pairing_template: RelationalTemplate,
-            pairing_id: VarId,
+        test_template: RelationalTemplate,
+        pairing_template: RelationalTemplate,
+        pairing_id: VarId,
     ) -> bool:
         if test_template is None:
             return False

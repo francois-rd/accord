@@ -18,19 +18,19 @@ def placeholder(_: ResourcesConfig, __: BeamSearchConfig, ___: ReducerConfig):
 
 
 def factory(
-        qa_dataset_loader: Callable[[], List[QAData]],
-        factual_instantiator_loader: Callable[[], Instantiator],
-        anti_factual_instantiator_loader: Callable[[], Instantiator],
-        formatter_loader: Callable[[], TermFormatter],
-        sorter_loader: Callable[[], QueryResultSorter],
-        language: str,
+    qa_dataset_loader: Callable[[], List[QAData]],
+    factual_instantiator_loader: Callable[[], Instantiator],
+    anti_factual_instantiator_loader: Callable[[], Instantiator],
+    formatter_loader: Callable[[], TermFormatter],
+    sorter_loader: Callable[[], QueryResultSorter],
+    language: str,
 ) -> Callable:
     class Generator:
         def __init__(
-                self,
-                resources: ResourcesConfig,
-                beam_search_cfg: BeamSearchConfig,
-                reducer_cfg: ReducerConfig,
+            self,
+            resources: ResourcesConfig,
+            beam_search_cfg: BeamSearchConfig,
+            reducer_cfg: ReducerConfig,
         ):
             self.resources = resources
             self.beam_search_cfg = beam_search_cfg
@@ -39,7 +39,8 @@ def factory(
         def run(self):
             # Load the relationally-transformed trees as well as all the dataset.
             trees = load_dataclass_jsonl(
-                self.resources.relational_trees_file, RelationalTree,
+                self.resources.relational_trees_file,
+                RelationalTree,
             )
             qa_dataset = qa_dataset_loader()
 

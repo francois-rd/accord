@@ -17,12 +17,12 @@ class BeamSearchProtocol(Enum):
 
 class BeamSearch:
     def __init__(
-            self,
-            factual_instantiator: Instantiator,
-            anti_factual_instantiator: Instantiator,
-            protocol: BeamSearchProtocol,
-            sorter: QueryResultSorter,
-            top_k: int = 0,
+        self,
+        factual_instantiator: Instantiator,
+        anti_factual_instantiator: Instantiator,
+        protocol: BeamSearchProtocol,
+        sorter: QueryResultSorter,
+        top_k: int = 0,
     ):
         self.factual_instantiator = factual_instantiator
         self.anti_factual_instantiator = anti_factual_instantiator
@@ -31,12 +31,12 @@ class BeamSearch:
         self.top_k = top_k
 
     def __call__(
-            self,
-            tree: RelationalTree,
-            anti_factual_ids: List[VarId],
-            seed_mapping: InstantiationMap,
-            *args,
-            **kwargs,
+        self,
+        tree: RelationalTree,
+        anti_factual_ids: List[VarId],
+        seed_mapping: InstantiationMap,
+        *args,
+        **kwargs,
     ) -> Iterable[InstantiationMap]:
         if self.protocol == BeamSearchProtocol.AF_IN_LINE:
             fn = self._do_inline
@@ -50,17 +50,21 @@ class BeamSearch:
         yield from fn(tree, anti_factual_ids, seed_mapping, order, 1, *args, **kwargs)
 
     def _do_inline(
-            self,
-            tree: RelationalTree,
-            anti_factual_ids: List[VarId],
-            fixed_mapping: InstantiationMap,
-            instantiation_order: InstantiationOrder,
-            count: int,
-            *args,
-            **kwargs,
+        self,
+        tree: RelationalTree,
+        anti_factual_ids: List[VarId],
+        fixed_mapping: InstantiationMap,
+        instantiation_order: InstantiationOrder,
+        count: int,
+        *args,
+        **kwargs,
     ) -> Iterable[InstantiationMap]:
         candidate_mapping = self._query_frontier_variables(
-            tree, anti_factual_ids, fixed_mapping, *args, **kwargs,
+            tree,
+            anti_factual_ids,
+            fixed_mapping,
+            *args,
+            **kwargs,
         )
         if candidate_mapping:
             # NOTE: If any list in values (which is a dict_values(List[str]) object)
@@ -73,33 +77,47 @@ class BeamSearch:
                 if len(set(new_mapping.values())) == len(new_mapping.values()):
                     new_order = {**instantiation_order, **{k: count for k in keys}}
                     yield from self._do_inline(
-                        tree, anti_factual_ids, new_mapping, new_order, count + 1,
-                        *args, **kwargs,
+                        tree,
+                        anti_factual_ids,
+                        new_mapping,
+                        new_order,
+                        count + 1,
+                        *args,
+                        **kwargs,
                     )
         else:  # If every variable is mapped. NOT "if some variable has empty mapping".
             # Skip mapping with non-unique terms for each variable.
             if len(set(fixed_mapping.values())) == len(fixed_mapping.values()):
                 is_valid = self._is_valid_mapping(
-                    tree, anti_factual_ids, fixed_mapping, instantiation_order,
-                    *args, **kwargs,
+                    tree,
+                    anti_factual_ids,
+                    fixed_mapping,
+                    instantiation_order,
+                    *args,
+                    **kwargs,
                 )
                 if is_valid:
                     yield fixed_mapping
 
     def _do_post_hoc(
-            self,
-            tree: RelationalTree,
-            anti_factual_ids: List[VarId],
-            fixed_mapping: InstantiationMap,
-            instantiation_order: InstantiationOrder,
-            count: int,
-            *args,
-            **kwargs,
+        self,
+        tree: RelationalTree,
+        anti_factual_ids: List[VarId],
+        fixed_mapping: InstantiationMap,
+        instantiation_order: InstantiationOrder,
+        count: int,
+        *args,
+        **kwargs,
     ) -> Iterable[InstantiationMap]:
         # For each factual mapping, find all combinations of re-mappings for AF vars.
         all_factual_mappings = self._do_inline(
-            tree, anti_factual_ids, fixed_mapping, instantiation_order, count,
-            *args, **kwargs,
+            tree,
+            anti_factual_ids,
+            fixed_mapping,
+            instantiation_order,
+            count,
+            *args,
+            **kwargs,
         )
         for mapping in all_factual_mappings:
             # For each Af variable, find all possible valid AF instantiations.
@@ -109,7 +127,9 @@ class BeamSearch:
                 # one, find its partner and query the AF instantiator based on the
                 # partner's current mapping.
                 self.sorter.new_collection(
-                    InstantiatorVariant.ANTI_FACTUAL, *args, **kwargs,
+                    InstantiatorVariant.ANTI_FACTUAL,
+                    *args,
+                    **kwargs,
                 )
                 af_term = mapping[af_var]
                 for template in tree.templates:
@@ -122,7 +142,11 @@ class BeamSearch:
                     q = Query(template, af_var, mapping[partner_var])
                     result = self.anti_factual_instantiator.query(q, *args, **kwargs)
                     self.sorter.add_query_result(
-                        result, q, *args, **kwargs, query_existing_term=af_term,
+                        result,
+                        q,
+                        *args,
+                        query_existing_term=af_term,
+                        **kwargs,
                     )
                 af_mapping[af_var] = self._clean_up()
 
@@ -148,12 +172,12 @@ class BeamSearch:
                     yield mapping
 
     def _query_frontier_variables(
-            self,
-            tree: RelationalTree,
-            anti_factual_ids: List[VarId],
-            fixed_mapping: InstantiationMap,
-            *args,
-            **kwargs,
+        self,
+        tree: RelationalTree,
+        anti_factual_ids: List[VarId],
+        fixed_mapping: InstantiationMap,
+        *args,
+        **kwargs,
     ) -> Dict[VarId, Set[Term]]:
         # Find frontier variables (variables whose relational partner is fixed).
         frontier_variables = {}
@@ -176,7 +200,9 @@ class BeamSearch:
             if frontier_var in anti_factual_ids and do_inline:
                 instantiator = self.anti_factual_instantiator
                 self.sorter.new_collection(
-                    InstantiatorVariant.ANTI_FACTUAL, *args, **kwargs,
+                    InstantiatorVariant.ANTI_FACTUAL,
+                    *args,
+                    **kwargs,
                 )
             else:
                 instantiator = self.factual_instantiator
@@ -190,16 +216,16 @@ class BeamSearch:
 
     def _clean_up(self) -> Set[Term]:
         results = self.sorter.sort_collection()
-        return set(results[:self.top_k] if 0 < self.top_k < len(results) else results)
+        return set(results[: self.top_k] if 0 < self.top_k < len(results) else results)
 
     def _is_valid_mapping(
-            self,
-            tree: RelationalTree,
-            anti_factual_ids: List[VarId],
-            fixed_mapping: InstantiationMap,
-            instantiation_order: InstantiationOrder,
-            *args,
-            **kwargs,
+        self,
+        tree: RelationalTree,
+        anti_factual_ids: List[VarId],
+        fixed_mapping: InstantiationMap,
+        instantiation_order: InstantiationOrder,
+        *args,
+        **kwargs,
     ) -> bool:
         factual_query = self.factual_instantiator.query
         do_inline = self.protocol == BeamSearchProtocol.AF_IN_LINE
@@ -220,8 +246,10 @@ class BeamSearch:
                     if source in anti_factual_ids and target in anti_factual_ids:
                         if query_term in factual_query(q, *args, **kwargs):
                             return False
-                    elif source not in anti_factual_ids \
-                            and target not in anti_factual_ids:
+                    elif (
+                        source not in anti_factual_ids
+                        and target not in anti_factual_ids
+                    ):
                         if query_term not in factual_query(q, *args, **kwargs):
                             return False
                     else:

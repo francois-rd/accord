@@ -17,8 +17,9 @@ class GenericVariable:
     has_children: A variable can have any number of children (vice versa to parent),
         the existence of which is used while building up the GenericReasoningTree.
     """
+
     identifier: Optional[VarId] = None
-    parent: Optional['GenericVariable'] = None
+    parent: Optional["GenericVariable"] = None
     has_children: bool = False
 
 
@@ -31,5 +32,6 @@ class Variable:
     term: Instantiation of this variable using a Term (i.e., a concept taken from a
         specific database of such concepts).
     """
+
     identifier: VarId
     term: Optional[Term] = None

@@ -30,7 +30,7 @@ class ConceptNet(TermFormatter):
         if term.startswith(f"/c/{language}/"):
             # Term is already probably formatted correctly. Still, have it be
             # in lowercase and without spaces just in case.
-            return term.lower().replace(' ', '_')
+            return term.lower().replace(" ", "_")
         elif term.startswith("/c/"):
             raise ValueError(f"Mismatch for term={term} and language={language}.")
         else:

@@ -13,8 +13,7 @@ class Relation:
     description: A free-form text description of the relation (for humans).
     surface_form: A free-form text instantiation of the relation (for LLMs).
     """
+
     type_: RelationType
     description: str
     surface_form: str
-
-

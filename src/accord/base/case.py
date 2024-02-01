@@ -60,7 +60,7 @@ class Case(Enum):
     """Case 4: B relation1 A; C relation2 B (relation1.source == relation2.target)"""
     FOUR = 4
 
-    def equivalent(self) -> 'Case':
+    def equivalent(self) -> "Case":
         """
         Returns the equivalent permutation Case under the assumption of
         order-invariant Relations.
@@ -87,6 +87,7 @@ class GenericCaseLink:
     r2_id: An identifier for the second specific relation (regardless of RelationType)
     case: The permutation Case linking the two relations.
     """
+
     r1_id: RelationId
     r2_id: RelationId
     case: Case
@@ -104,19 +105,20 @@ class RelationalCaseLink:
     r2_type: The type of the second Relation (regardless of specific Relation instance).
     case: The permutation Case linking the two RelationTypes.
     """
+
     r1_type: RelationType
     r2_type: RelationType
     case: Case
 
-    def equivalent(self) -> 'RelationalCaseLink':
+    def equivalent(self) -> "RelationalCaseLink":
         """Returns the equivalent CaseLink under assumed Relation permutation."""
         return RelationalCaseLink(self.r2_type, self.r1_type, self.case.equivalent())
 
     @staticmethod
     def from_templates(
-            t1: RelationalTemplate,
-            t2: RelationalTemplate,
-    ) -> 'RelationalCaseLink':
+        t1: RelationalTemplate,
+        t2: RelationalTemplate,
+    ) -> "RelationalCaseLink":
         # Figure out which Case we are dealing with. Robustly check for circular
         # template links as otherwise we can't be sure case checks are unique.
         t1_source, t1_target = t1.source_id, t1.target_id

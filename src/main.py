@@ -38,9 +38,8 @@ def forest_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
     sorter_cfg = cfgs.SorterConfig = configs[sorter.id_]
 
     # Remove the superfluous configs from the initialization of the command.
-    init_hook = coma.hooks.init_hook.positional_factory(
-        csqa.id_, conceptnet.id_, sorter.id_,
-    )
+    factory = coma.hooks.init_hook.positional_factory
+    init_hook = factory(csqa.id_, conceptnet.id_, sorter.id_)
 
     # Load ConceptNet.
     conceptnet_d = os.path.join(srcs_cfg.term_database_dir, c_net_cfg.preprocessed_dir)
@@ -110,10 +109,12 @@ def pre_run_hook(known_args):
         quit()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Initialize.
     dry_run_hook = coma.hooks.parser_hook.factory(
-        "--dry-run", action="store_true", help="exit during pre-run",
+        "--dry-run",
+        action="store_true",
+        help="exit during pre-run",
     )
     coma.initiate(
         parser_hook=coma.hooks.sequence(coma.hooks.parser_hook.default, dry_run_hook),
@@ -126,7 +127,9 @@ if __name__ == '__main__':
         "preprocess.conceptnet", preprocess.conceptnet.preprocess, **as_dict(conceptnet)
     )
     coma.register(
-        "preprocess.csqa.infer", preprocess.csqa.infer, **as_dict(csqa, conceptnet),
+        "preprocess.csqa.infer",
+        preprocess.csqa.infer,
+        **as_dict(csqa, conceptnet),
     )
     coma.register("preprocess.csqa.sample", preprocess.csqa.sample, **as_dict(csqa))
     coma.register("preprocess.csqa.convert", preprocess.csqa.convert, **as_dict(csqa))
@@ -136,7 +139,8 @@ if __name__ == '__main__':
     coma.register("generate.relational", generate.relational.Generate)
     with coma.forget(init_hook=True):
         coma.register(
-            "generate.forest.csqa.conceptnet", generate.forest.placeholder,
+            "generate.forest.csqa.conceptnet",
+            generate.forest.placeholder,
             init_hook=forest_csqa_conceptnet_init_hook,
             **as_dict(beam_search, reducer, csqa, conceptnet, sorter),
         )

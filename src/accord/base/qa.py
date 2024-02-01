@@ -25,6 +25,7 @@ class QAData:
         the same (though not necessarily the whole Relation).
     kwargs: Other relevant parameters, if any.
     """
+
     identifier: str
     question: str
     correct_answer_label: Label

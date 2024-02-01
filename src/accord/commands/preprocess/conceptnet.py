@@ -45,7 +45,7 @@ def preprocess(resources: ResourcesConfig, cfg: ConceptNetConfig):
     # Load the data.
     if cfg.verbose:
         print(f"Loading raw data...", flush=True)
-    df = pd.read_csv(raw_data_file, sep='\t', header=None)
+    df = pd.read_csv(raw_data_file, sep="\t", header=None)
     df.columns = ["uri", "relation", "source", "target", "info"]
     if cfg.verbose:
         print(f"Done.", flush=True)
@@ -53,16 +53,16 @@ def preprocess(resources: ResourcesConfig, cfg: ConceptNetConfig):
     # Drop irrelevant columns.
     if cfg.verbose:
         print(f"Processing...", flush=True)
-    df.drop(columns=['uri', 'info'], inplace=True)
+    df.drop(columns=["uri", "info"], inplace=True)
 
     # Keep only relevant relations.
     relations = [f"/r/{relation}" for relation in cfg.relations]
-    df = df.loc[df['relation'].isin(relations)]
+    df = df.loc[df["relation"].isin(relations)]
 
     # Keep only relevant languages.
     for language in cfg.languages:
-        df = df.loc[df['source'].str.startswith(f"/c/{language}")]
-        df = df.loc[df['target'].str.startswith(f"/c/{language}")]
+        df = df.loc[df["source"].str.startswith(f"/c/{language}")]
+        df = df.loc[df["target"].str.startswith(f"/c/{language}")]
     if cfg.verbose:
         print(f"Done.", flush=True)
 
@@ -70,10 +70,10 @@ def preprocess(resources: ResourcesConfig, cfg: ConceptNetConfig):
     if cfg.verbose:
         print(f"Saving...", flush=True)
     os.makedirs(preprocessed_dir, exist_ok=True)
-    for relation, new_df in df.groupby(df['relation']):
+    for relation, new_df in df.groupby(df["relation"]):
         file_name = f"{relation.replace('/r/', '')}.csv"
         file_path = os.path.join(preprocessed_dir, file_name)
-        new_df.drop(columns=['relation'], inplace=True)
+        new_df.drop(columns=["relation"], inplace=True)
         new_df.to_csv(file_path, index=False, header=False)
     if cfg.verbose:
         print(f"Done.", flush=True)

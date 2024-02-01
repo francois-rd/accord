@@ -10,12 +10,12 @@ class QueryResultSorter:
         raise NotImplementedError
 
     def add_query_result(
-            self,
-            result: QueryResult,
-            query: Query,
-            *args,
-            query_existing_term: Optional[Term] = None,
-            **kwargs,
+        self,
+        result: QueryResult,
+        query: Query,
+        *args,
+        query_existing_term: Optional[Term] = None,
+        **kwargs,
     ):
         raise NotImplementedError
 
@@ -25,12 +25,12 @@ class QueryResultSorter:
 
 class SemanticDistanceCalculator:
     def __call__(
-            self,
-            query_term: Term,
-            query: Query,
-            *args,
-            query_existing_term: Optional[Term] = None,
-            **kwargs,
+        self,
+        query_term: Term,
+        query: Query,
+        *args,
+        query_existing_term: Optional[Term] = None,
+        **kwargs,
     ) -> float:
         # TODO: NOTE: All three Terms here are formatted. Depending on the underlying
         #  implementation of the distance metric, we may need to "unformat" them. But,
@@ -44,10 +44,10 @@ class SemanticDistanceCalculator:
 
 class SemanticDistanceSorter(QueryResultSorter):
     def __init__(
-            self,
-            target_distance: float,
-            semantic_distance_calculator: SemanticDistanceCalculator,
-            distance_aggregator: Callable[[Iterable[float]], float] = sum,
+        self,
+        target_distance: float,
+        semantic_distance_calculator: SemanticDistanceCalculator,
+        distance_aggregator: Callable[[Iterable[float]], float] = sum,
     ):
         self.target = target_distance
         self.semantic_distance = semantic_distance_calculator
@@ -60,17 +60,21 @@ class SemanticDistanceSorter(QueryResultSorter):
         self.count = 0
 
     def add_query_result(
-            self,
-            result: QueryResult,
-            query: Query,
-            *args,
-            query_existing_term: Optional[Term] = None,
-            **kwargs,
+        self,
+        result: QueryResult,
+        query: Query,
+        *args,
+        query_existing_term: Optional[Term] = None,
+        **kwargs,
     ):
         self.count += 1
         for term in result:
             distance = self.semantic_distance(
-                term, query, *args, query_existing_term=query_existing_term, **kwargs,
+                term,
+                query,
+                *args,
+                query_existing_term=query_existing_term,
+                **kwargs,
             )
             self.collection.setdefault(term, []).append(abs(self.target - distance))
 
@@ -90,12 +94,12 @@ class RandomUnSorter(QueryResultSorter):
         self.collection = []
 
     def add_query_result(
-            self,
-            result: QueryResult,
-            _: Query,
-            *args,
-            __: Optional[Term] = None,
-            **kwargs,
+        self,
+        result: QueryResult,
+        _: Query,
+        *args,
+        __: Optional[Term] = None,
+        **kwargs,
     ):
         self.collection.append(result)
 

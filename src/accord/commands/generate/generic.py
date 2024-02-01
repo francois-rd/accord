@@ -17,6 +17,7 @@ def generate(resources: ResourcesConfig):
     Saves up to <number of Cases> ^ <n_hop choose 2> GenericTrees to file,
     though typically much fewer in practice after filtering.
     """
+
     def _helper(all_pairs, list_index: int):
         if list_index >= len(all_pairs):
             yield []

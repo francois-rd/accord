@@ -30,8 +30,8 @@ class Generate:
         return list(self._remove_isomorphic_trees(tree_groups.values()))
 
     def _remove_isomorphic_trees(
-            self,
-            grouped_trees: Iterable[Iterable[RelationalTree]],
+        self,
+        grouped_trees: Iterable[Iterable[RelationalTree]],
     ) -> List[RelationalTree]:
         """Remove isomorphic (i.e., duplicate) trees based on matched relation types."""
         for tree_group in grouped_trees:
@@ -49,6 +49,6 @@ class Generate:
 
     @staticmethod
     def _em(e1, e2):
-        v1 = {v['type_'] for v in e1.values()}
-        v2 = {v['type_'] for v in e2.values()}
+        v1 = {v["type_"] for v in e1.values()}
+        v2 = {v["type_"] for v in e2.values()}
         return v1 == v2

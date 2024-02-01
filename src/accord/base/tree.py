@@ -19,6 +19,7 @@ class GenericTree:
 
     templates: Unordered GenericTemplates with cross-linked GenericVariables.
     """
+
     templates: List[GenericTemplate]
 
 
@@ -31,6 +32,7 @@ class RelationalTree:
 
     templates: Unordered RelationalTemplates with cross-linked Variable identifiers.
     """
+
     templates: List[RelationalTemplate]
 
     def as_graph(self) -> nx.MultiDiGraph:
@@ -65,6 +67,7 @@ class InstantiationData:
     mapping: A mapping between all Variable identifiers and their respective
         instantiation Terms.
     """
+
     pairing_template: Optional[RelationalTemplate] = None
     pairing: Optional[Tuple[VarId, Term]] = None
     answer_id: Optional[VarId] = None
@@ -100,10 +103,11 @@ class Tree:
     templates: Unordered Templates with cross-linked Variables.
     data: InstantiationData necessary for instantiating the templates of this Tree.
     """
+
     templates: List[Template]
     data: InstantiationData
 
-    def instantiate(self) -> 'Tree':
+    def instantiate(self) -> "Tree":
         for template in self.templates:
             template.source.term = self.data.mapping[template.source.identifier]
             template.target.term = self.data.mapping[template.target.identifier]
