@@ -15,9 +15,11 @@ class RelationalTransform:
         # Transform generic tree into relational tree.
         new_templates = []
         for template, relation in zip(tree.templates, self.relations):
-            new_templates.append(RelationalTemplate(
-                source_id=template.source.identifier,
-                relation_type=relation.type_,
-                target_id=template.target.identifier,
-            ))
+            new_templates.append(
+                RelationalTemplate(
+                    source_id=template.source.identifier,
+                    relation_type=relation.type_,
+                    target_id=template.target.identifier,
+                )
+            )
         return RelationalTree(new_templates)

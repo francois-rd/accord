@@ -52,14 +52,14 @@ class GenericTreeTransform:
                 templates[case_link.r1_id] = GenericTemplate(
                     GenericVariable(identifier=f"V{variable_counter}"),
                     case_link.r1_id,
-                    GenericVariable(identifier=f"V{variable_counter + 1}")
+                    GenericVariable(identifier=f"V{variable_counter + 1}"),
                 )
                 variable_counter += 2
             if case_link.r2_id not in templates:
                 templates[case_link.r2_id] = GenericTemplate(
                     GenericVariable(identifier=f"V{variable_counter}"),
                     case_link.r2_id,
-                    GenericVariable(identifier=f"V{variable_counter + 1}")
+                    GenericVariable(identifier=f"V{variable_counter + 1}"),
                 )
                 variable_counter += 2
         return templates

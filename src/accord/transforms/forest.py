@@ -17,12 +17,12 @@ from ..base import (
 
 class ForestTransform:
     def __init__(
-            self,
-            reducer: Optional[Reducer],
-            beam_search: BeamSearch,
-            protocol: BeamSearchProtocol,
-            formatter: TermFormatter,
-            language: str,
+        self,
+        reducer: Optional[Reducer],
+        beam_search: BeamSearch,
+        protocol: BeamSearchProtocol,
+        formatter: TermFormatter,
+        language: str,
     ):
         self.reducer = reducer
         self.beam_search = beam_search
@@ -31,9 +31,9 @@ class ForestTransform:
         self.language = language
 
     def __call__(
-            self,
-            trees: Iterable[RelationalTree],
-            qa_data: QAData,
+        self,
+        trees: Iterable[RelationalTree],
+        qa_data: QAData,
     ) -> InstantiationForest:
         """
         Given a sequence of (relationally-transformed) ReasoningTrees and some QAData,
@@ -46,22 +46,22 @@ class ForestTransform:
             for pairing_data in self._all_pairings(tree, qa_data):
                 for anti_factual_ids in self._all_anti_factual_ids(tree, pairing_data):
                     for full_data in self._instantiate_variables(
-                            tree, pairing_data, anti_factual_ids, qa_data
+                        tree, pairing_data, anti_factual_ids, qa_data
                     ):
                         if family is None:
                             # Delay creating a new family until at least one valid hit.
                             family = forest.add_family(tree)
                         family.add(full_data)
                         if count % 10 == 0:
-                            print(".", flush=True, end='')
+                            print(".", flush=True, end="")
                         count += 1
         print(f"\nTotal tree count for QAData ({qa_data.identifier}): {count}")
         return forest
 
     def _all_pairings(
-            self,
-            tree: RelationalTree,
-            qa_data: QAData,
+        self,
+        tree: RelationalTree,
+        qa_data: QAData,
     ) -> Iterable[InstantiationData]:
         for template in tree.templates:
             for pairing in self._find_pairings(template, qa_data):
@@ -78,8 +78,8 @@ class ForestTransform:
 
     @staticmethod
     def _find_pairings(
-            template: RelationalTemplate,
-            qa_data: QAData,
+        template: RelationalTemplate,
+        qa_data: QAData,
     ) -> Iterable[Tuple[VarId, Term]]:
         for pairing_template in qa_data.pairing_templates:
             # Fitting a pairing fails if the RelationTypes don't match.
@@ -95,8 +95,8 @@ class ForestTransform:
 
     @staticmethod
     def _all_anti_factual_ids(
-            tree: RelationalTree,
-            data: InstantiationData,
+        tree: RelationalTree,
+        data: InstantiationData,
     ) -> Iterable[List[VarId]]:
         """
         Exhaustively chooses all possible combinations of anti-factual Variables. For
@@ -114,11 +114,11 @@ class ForestTransform:
                 yield list(combination)
 
     def _instantiate_variables(
-            self,
-            tree: RelationalTree,
-            data: InstantiationData,
-            anti_factual_ids: List[VarId],
-            qa_data: QAData,
+        self,
+        tree: RelationalTree,
+        data: InstantiationData,
+        anti_factual_ids: List[VarId],
+        qa_data: QAData,
     ) -> Iterable[InstantiationData]:
         if self.protocol == BeamSearchProtocol.AF_IN_LINE:
             for label_term in qa_data.answer_choices.values():
@@ -136,19 +136,18 @@ class ForestTransform:
             yield from self._do_instantiate(tree, data, anti_factual_ids, seed_map)
         else:
             raise ValueError(
-                f"Unsupported value for beam search protocol: "
-                f"{self.protocol}"
+                f"Unsupported value for beam search protocol: {self.protocol}"
             )
 
     def _format(self, term: Term) -> Term:
         return self.formatter.format(term, self.language)
 
     def _do_instantiate(
-            self,
-            tree: RelationalTree,
-            data: InstantiationData,
-            anti_factual_ids: List[VarId],
-            seed_mapping: Dict[VarId, Term],
+        self,
+        tree: RelationalTree,
+        data: InstantiationData,
+        anti_factual_ids: List[VarId],
+        seed_mapping: Dict[VarId, Term],
     ) -> Iterable[InstantiationData]:
         for mapping in self.beam_search(tree, anti_factual_ids, seed_mapping):
             yield replace(
