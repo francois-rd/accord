@@ -1,0 +1,6 @@
+black>=23.3.0
+coma>=1.0.1
+dacite>=1.8.1
+networkx>=2.6.3
+pandas>=1.3.5
+tqdm>=4.66.1
