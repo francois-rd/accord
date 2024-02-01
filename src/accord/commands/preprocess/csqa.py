@@ -7,7 +7,7 @@ from tqdm import tqdm
 import pandas as pd
 
 from .conceptnet import ConceptNetConfig
-from ..configs import ResourcesConfig
+from ..configs import GeneralConfig, ResourcesConfig
 from ...base import QAData, Relation, Template, Variable
 from ...databases.conceptnet import ConceptNet
 from ...io import (
@@ -31,10 +31,14 @@ class CSQAConfig:
     language: str = "en"
     limit: int = 20
     seed: int = 314159
-    verbose: bool = False
 
 
-def infer(resources: ResourcesConfig, cfg: CSQAConfig, c_net_cfg: ConceptNetConfig):
+def infer(
+    resources: ResourcesConfig,
+    general: GeneralConfig,
+    cfg: CSQAConfig,
+    c_net_cfg: ConceptNetConfig,
+):
     """
     Infers the ConceptNet relation type of each sample in CSQA based on majority vote.
     """
@@ -57,7 +61,7 @@ def infer(resources: ResourcesConfig, cfg: CSQAConfig, c_net_cfg: ConceptNetConf
     # Infer the ConceptNet relation of each sample in CSQA based on majority vote.
     csqa_by_type = {}
     failures = []
-    for datum in tqdm(csqa_data, desc="Progress", disable=not cfg.verbose):
+    for datum in tqdm(csqa_data, desc="Progress", disable=not general.verbose):
         question = datum["question"]
         node_word = concept_net.format(question["question_concept"], cfg.language)
         other_words = [choice["text"] for choice in question["choices"]]
@@ -76,7 +80,7 @@ def infer(resources: ResourcesConfig, cfg: CSQAConfig, c_net_cfg: ConceptNetConf
     save_json(failures_file, failures, indent=4)
 
 
-def sample(resources: ResourcesConfig, cfg: CSQAConfig):
+def sample(resources: ResourcesConfig, general: GeneralConfig, cfg: CSQAConfig):
     """
     Given CSQA data split by inferred ConceptNet relation type, for each such relation
     type, sub-samples up to 'limit' items from the associated CSQA samples and saves
@@ -98,7 +102,7 @@ def sample(resources: ResourcesConfig, cfg: CSQAConfig):
             sub_samples[k] = values_list
         else:
             sub_samples[k] = random.sample(values_list, cfg.limit)
-        if cfg.verbose:
+        if general.verbose:
             print(f"{k}: sub-sampling {len(sub_samples[k])} of {len(values_list)}")
 
     # Save the data to CSV in a useful output format.

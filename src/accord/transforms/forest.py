@@ -39,7 +39,6 @@ class ForestTransform:
         Given a sequence of (relationally-transformed) ReasoningTrees and some QAData,
         apply a sequence of Transforms to each tree, returning a ReasoningForest.
         """
-        count = 0
         forest = InstantiationForest()
         for tree in trees:
             family = None  # This avoids adding families with no valid instantiations.
@@ -52,10 +51,6 @@ class ForestTransform:
                             # Delay creating a new family until at least one valid hit.
                             family = forest.add_family(tree)
                         family.add(full_data)
-                        if count % 10 == 0:
-                            print(".", flush=True, end="")
-                        count += 1
-        print(f"\nTotal tree count for QAData ({qa_data.identifier}): {count}")
         return forest
 
     def _all_pairings(

@@ -1,7 +1,9 @@
 from typing import Callable, List
 import os
 
-from ..configs import BeamSearchConfig, ReducerConfig, ResourcesConfig
+from tqdm import tqdm
+
+from ..configs import BeamSearchConfig, GeneralConfig, ReducerConfig, ResourcesConfig
 from ...base import RelationalTree, QAData
 from ...components import BeamSearch, Instantiator, QueryResultSorter, TermFormatter
 from ...transforms import ForestTransform
@@ -29,10 +31,12 @@ def factory(
         def __init__(
             self,
             resources: ResourcesConfig,
+            general: GeneralConfig,
             beam_search_cfg: BeamSearchConfig,
             reducer_cfg: ReducerConfig,
         ):
             self.resources = resources
+            self.general = general
             self.beam_search_cfg = beam_search_cfg
             self.reducer_cfg = reducer_cfg
 
@@ -72,8 +76,8 @@ def factory(
             )
 
             # For each QAData, transform all trees, then save.
-            dir_ = self.resources.forest_dir
-            for qa_data in qa_dataset:
+            dir_, disable = self.resources.forest_dir, not self.general.verbose
+            for qa_data in tqdm(qa_dataset, desc="Progress", disable=disable):
                 forest = transform(trees, qa_data)
                 file_path = os.path.join(dir_, f"{qa_data.identifier}.json")
                 save_dataclass_json(file_path, forest, indent=4)

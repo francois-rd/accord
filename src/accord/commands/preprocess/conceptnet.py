@@ -4,7 +4,7 @@ import os
 
 import pandas as pd
 
-from ..configs import ResourcesConfig
+from ..configs import GeneralConfig, ResourcesConfig
 from ...base import RelationType
 from ...databases.conceptnet import AntiFactualMethod
 
@@ -33,25 +33,24 @@ class ConceptNetConfig:
     # The method of ConceptNet-based anti-factual instantiation to use.
     anti_factual_method: AntiFactualMethod = AntiFactualMethod.SAME_RELATION
 
-    # Whether to preprocess verbosely using tqdm.
-    verbose: bool = False
 
-
-def preprocess(resources: ResourcesConfig, cfg: ConceptNetConfig):
+def preprocess(
+    general: GeneralConfig, resources: ResourcesConfig, cfg: ConceptNetConfig
+):
     # Merge resource paths.
     raw_data_file = os.path.join(resources.term_database_dir, cfg.raw_data_file)
     preprocessed_dir = os.path.join(resources.term_database_dir, cfg.preprocessed_dir)
 
     # Load the data.
-    if cfg.verbose:
+    if general.verbose:
         print(f"Loading raw data...", flush=True)
     df = pd.read_csv(raw_data_file, sep="\t", header=None)
     df.columns = ["uri", "relation", "source", "target", "info"]
-    if cfg.verbose:
+    if general.verbose:
         print(f"Done.", flush=True)
 
     # Drop irrelevant columns.
-    if cfg.verbose:
+    if general.verbose:
         print(f"Processing...", flush=True)
     df.drop(columns=["uri", "info"], inplace=True)
 
@@ -63,11 +62,11 @@ def preprocess(resources: ResourcesConfig, cfg: ConceptNetConfig):
     for language in cfg.languages:
         df = df.loc[df["source"].str.startswith(f"/c/{language}")]
         df = df.loc[df["target"].str.startswith(f"/c/{language}")]
-    if cfg.verbose:
+    if general.verbose:
         print(f"Done.", flush=True)
 
     # Split data by relation type and save to file.
-    if cfg.verbose:
+    if general.verbose:
         print(f"Saving...", flush=True)
     os.makedirs(preprocessed_dir, exist_ok=True)
     for relation, new_df in df.groupby(df["relation"]):
@@ -75,5 +74,5 @@ def preprocess(resources: ResourcesConfig, cfg: ConceptNetConfig):
         file_path = os.path.join(preprocessed_dir, file_name)
         new_df.drop(columns=["relation"], inplace=True)
         new_df.to_csv(file_path, index=False, header=False)
-    if cfg.verbose:
+    if general.verbose:
         print(f"Done.", flush=True)

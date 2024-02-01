@@ -20,6 +20,7 @@ ConfigData = namedtuple("ConfigData", "id_ type_")
 beam_search = ConfigData("beam_search", cfgs.BeamSearchConfig)
 conceptnet = ConfigData("conceptnet", preprocess.conceptnet.ConceptNetConfig)
 csqa = ConfigData("csqa", preprocess.csqa.CSQAConfig)
+general = ConfigData("general", cfgs.GeneralConfig)
 reducer = ConfigData("reducer", cfgs.ReducerConfig)
 resources = ConfigData("resources", cfgs.ResourcesConfig)
 sorter = ConfigData("sorter", cfgs.SorterConfig)
@@ -124,15 +125,25 @@ if __name__ == "__main__":
 
     # Data preprocessing commands.
     coma.register(
-        "preprocess.conceptnet", preprocess.conceptnet.preprocess, **as_dict(conceptnet)
+        "preprocess.conceptnet",
+        preprocess.conceptnet.preprocess,
+        **as_dict(general, conceptnet),
     )
     coma.register(
         "preprocess.csqa.infer",
         preprocess.csqa.infer,
-        **as_dict(csqa, conceptnet),
+        **as_dict(general, csqa, conceptnet),
     )
-    coma.register("preprocess.csqa.sample", preprocess.csqa.sample, **as_dict(csqa))
-    coma.register("preprocess.csqa.convert", preprocess.csqa.convert, **as_dict(csqa))
+    coma.register(
+        "preprocess.csqa.sample",
+        preprocess.csqa.sample,
+        **as_dict(general, csqa),
+    )
+    coma.register(
+        "preprocess.csqa.convert",
+        preprocess.csqa.convert,
+        **as_dict(csqa),
+    )
 
     # Tree generation commands (either directly or via transforms).
     coma.register("generate.generic", generate.generic.generate)
@@ -142,7 +153,7 @@ if __name__ == "__main__":
             "generate.forest.csqa.conceptnet",
             generate.forest.placeholder,
             init_hook=forest_csqa_conceptnet_init_hook,
-            **as_dict(beam_search, reducer, csqa, conceptnet, sorter),
+            **as_dict(general, beam_search, reducer, csqa, conceptnet, sorter),
         )
 
     # Run.

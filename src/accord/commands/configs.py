@@ -4,6 +4,11 @@ from ..components import BeamSearchProtocol
 
 
 @dataclass
+class GeneralConfig:
+    verbose: bool = False
+
+
+@dataclass
 class ResourcesConfig:
     # Top level directory for resources and data.
     root_dir: str = "data"
