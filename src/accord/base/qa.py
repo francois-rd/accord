@@ -1,7 +1,9 @@
-from typing import Any, Dict, Hashable, List
+from typing import Any, Dict, Hashable, List, Optional
 from dataclasses import dataclass
 
+from .instantiation import InstantiationData, InstantiationId
 from .template import Template
+from .tree import Tree
 from .variable import Term
 
 
@@ -38,3 +40,16 @@ class QAData:
             s, t = template.source.term, template.target.term
             if (s is None and t is None) or (s is not None and t is not None):
                 raise ValueError("Pairing template must have one free variable.")
+
+
+@dataclass
+class QAGroup:
+    data_ids: Dict[Label, InstantiationId]
+    data_map: Dict[Label, Optional[InstantiationData]]
+
+
+@dataclass
+class QAPrompt:
+    qa_data: QAData
+    qa_group: QAGroup
+    tree_map: Dict[Label, Tree]
