@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from .relation import Relation, RelationId, RelationType
 from .variable import GenericVariable, Variable, VarId
@@ -39,11 +40,13 @@ class RelationalTemplate:
 
     def partial_equals(
         self,
-        other: "RelationalTemplate",
+        other: Optional["RelationalTemplate"],
         source_ids: bool = False,
         relation_types: bool = False,
         target_ids: bool = False,
     ) -> bool:
+        if other is None:
+            return False
         if source_ids and self.source_id != other.source_id:
             return False
         if relation_types and self.relation_type != other.relation_type:
@@ -70,7 +73,7 @@ class Template:
 
     def partial_equals(
         self,
-        other: "Template",
+        other: Optional["Template"],
         source_ids: bool = False,
         source_terms: bool = False,
         relation_types: bool = False,
@@ -79,6 +82,8 @@ class Template:
         target_ids: bool = False,
         target_terms: bool = False,
     ) -> bool:
+        if other is None:
+            return False
         if source_ids and self.source.identifier != other.source.identifier:
             return False
         if source_terms and self.source.term != other.source.term:
