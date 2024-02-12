@@ -93,7 +93,7 @@ class SorterConfig:
 
 @dataclass
 class MappingDistanceConfig:
-    use_mapping_distance: bool = False
+    ignore: bool = True
     target_distances: List[int] = field(default_factory=lambda: [-1])
     count_answer_ids: bool = False
     count_pairing_ids: bool = False
