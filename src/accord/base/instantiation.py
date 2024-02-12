@@ -30,7 +30,7 @@ class InstantiationData:
         instantiation Terms.
     """
 
-    identifier: str
+    identifier: Optional[InstantiationId] = None
     pairing_template: Optional[RelationalTemplate] = None
     pairing: Optional[Tuple[VarId, Term]] = None
     qa_template: Optional[Template] = None

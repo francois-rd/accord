@@ -1,5 +1,4 @@
 from typing import Callable, List
-import os
 
 from tqdm import tqdm
 
@@ -7,15 +6,15 @@ from ..configs import BeamSearchConfig, GeneralConfig, ReducerConfig, ResourcesC
 from ...base import RelationalTree, QAData
 from ...components import BeamSearch, Instantiator, QueryResultSorter, TermFormatter
 from ...transforms import ForestTransform
-from ...io import (
-    save_dataclass_json,
-    load_dataclass_jsonl,
-    load_reducer_csv,
-    load_relations_csv,
-)
+from ...io import ForestIO, load_dataclass_jsonl, load_reducer_csv, load_relations_csv
 
 
-def placeholder(_: ResourcesConfig, __: BeamSearchConfig, ___: ReducerConfig):
+def placeholder(
+    _: ResourcesConfig,
+    __: GeneralConfig,
+    ___: BeamSearchConfig,
+    ____: ReducerConfig,
+):
     pass
 
 
@@ -76,10 +75,13 @@ def factory(
             )
 
             # For each QAData, transform all trees, then save.
-            dir_, disable = self.resources.forest_dir, not self.general.verbose
+            forest_io = ForestIO(
+                dir_path=self.resources.forest_and_group_dir,
+                family_file_name=self.resources.forest_families_file,
+                data_file_name=self.resources.forest_data_file,
+            )
+            disable = not self.general.verbose
             for qa_data in tqdm(qa_dataset, desc="Progress", disable=disable):
-                forest = transform(trees, qa_data)
-                file_path = os.path.join(dir_, f"{qa_data.identifier}.json")
-                save_dataclass_json(file_path, forest, indent=4)
+                forest_io.save_jsonl(qa_data, transform(trees, qa_data))
 
     return Generator

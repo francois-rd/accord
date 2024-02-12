@@ -10,6 +10,7 @@ from ..base import (
     RelationalTemplate,
     RelationalTree,
     QAData,
+    Template,
     Term,
     VarId,
 )
@@ -29,6 +30,7 @@ class ForestTransform:
         self.protocol = protocol
         self.formatter = formatter
         self.language = language
+        self.data_id_counter = 0
 
     def __call__(
         self,
@@ -50,7 +52,8 @@ class ForestTransform:
                         if family is None:
                             # Delay creating a new family until at least one valid hit.
                             family = forest.add_family(tree)
-                        family.add(full_data)
+                        family.add(full_data.identifier)
+                        forest.add_data(full_data)
         return forest
 
     def _all_pairings(
@@ -59,7 +62,7 @@ class ForestTransform:
         qa_data: QAData,
     ) -> Iterable[InstantiationData]:
         for template in tree.templates:
-            for pairing in self._find_pairings(template, qa_data):
+            for pairing, qa_template in self._find_pairings(template, qa_data):
                 if self.reducer is None:
                     answers = tree.unique_variable_ids() - {pairing[0]}
                 else:
@@ -68,6 +71,7 @@ class ForestTransform:
                     yield InstantiationData(
                         pairing_template=deepcopy(template),
                         pairing=pairing,
+                        qa_template=qa_template,
                         answer_id=answer,
                     )
 
@@ -75,18 +79,18 @@ class ForestTransform:
     def _find_pairings(
         template: RelationalTemplate,
         qa_data: QAData,
-    ) -> Iterable[Tuple[VarId, Term]]:
-        for pairing_template in qa_data.pairing_templates:
+    ) -> Iterable[Tuple[Tuple[VarId, Term], Template]]:
+        for qa_template in qa_data.pairing_templates:
             # Fitting a pairing fails if the RelationTypes don't match.
-            if pairing_template.relation.type_ != template.relation_type:
+            if qa_template.relation.type_ != template.relation_type:
                 continue
 
             # Whichever variable in the pairing template is instantiated, the equivalent
             # variable in the test template becomes the pairing variable in the tree.
-            if pairing_template.source.term is not None:
-                yield template.source_id, pairing_template.source.term
-            if pairing_template.target.term is not None:
-                yield template.target_id, pairing_template.target.term
+            if qa_template.source.term is not None:
+                yield (template.source_id, qa_template.source.term), qa_template
+            if qa_template.target.term is not None:
+                yield (template.target_id, qa_template.target.term), qa_template
 
     @staticmethod
     def _all_anti_factual_ids(
@@ -145,8 +149,11 @@ class ForestTransform:
         seed_mapping: Dict[VarId, Term],
     ) -> Iterable[InstantiationData]:
         for mapping in self.beam_search(tree, anti_factual_ids, seed_mapping):
-            yield replace(
+            new_data = replace(
                 deepcopy(data),
+                identifier=f"I{self.data_id_counter}",
                 anti_factual_ids=anti_factual_ids,
                 mapping=deepcopy(mapping),
             )
+            self.data_id_counter += 1
+            yield new_data

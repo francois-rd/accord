@@ -1,13 +1,20 @@
 from typing import Any, Dict, Hashable, List, Optional
 from dataclasses import dataclass
+from copy import deepcopy
 
-from .instantiation import InstantiationData, InstantiationId
 from .template import Template
 from .tree import Tree
 from .variable import Term
+from .instantiation import (
+    InstantiationData,
+    InstantiationForest,
+    InstantiationId,
+    InstantiationMap,
+)
 
 
 Label = str
+QAGroupId = str
 
 
 @dataclass
@@ -44,8 +51,19 @@ class QAData:
 
 @dataclass
 class QAGroup:
+    identifier: QAGroupId
     data_ids: Dict[Label, InstantiationId]
-    data_map: Dict[Label, Optional[InstantiationData]]
+    mapping_map: Dict[Label, Optional[InstantiationMap]]
+    data_map: Optional[Dict[Label, InstantiationData]] = None
+
+    def instantiate(self, forest: InstantiationForest):
+        self.data_map = {}
+        for label, mapping in self.mapping_map.items():
+            if mapping is None:
+                self.data_map[label] = forest.data_map[self.data_ids[label]]
+            else:
+                self.data_map[label] = deepcopy(forest.data_map[self.data_ids[label]])
+                self.data_map[label].mapping = deepcopy(mapping)
 
 
 @dataclass
