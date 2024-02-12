@@ -92,7 +92,7 @@ class InstantiationData:
             blacklist.extend([self.answer_id, other.answer_id])
         if not count_pairing_ids:
             blacklist.extend([self.pairing[0], other.pairing[0]])
-        for var_id, term in self.mapping:
+        for var_id, term in self.mapping.items():
             if other.mapping[var_id] != term and var_id not in blacklist:
                 count += 1
         return count

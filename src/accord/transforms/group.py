@@ -55,10 +55,6 @@ class BasicQAGroupTransform:
         self.language = language
         self.relation_map = {r.type_: r for r in relations}
         self.mapping_distance_fn = mapping_distance_fn
-        if mapping_distance_fn is None and protocol == BeamSearchProtocol.AF_IN_LINE:
-            raise ValueError(
-                f"Mapping distance function cannot be None for protocol {protocol}"
-            )
         self.group_id_counter = 0
 
     def __call__(

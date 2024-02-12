@@ -124,7 +124,7 @@ def group_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
 
     # Use the factory to create an appropriate mapping distance function (if any).
     fn = None
-    if dist_cfg.use_mapping_distance:
+    if not dist_cfg.ignore:
         fn = mapping_distance_factory(
             target_distances=dist_cfg.target_distances,
             count_answer_ids=dist_cfg.count_answer_ids,
