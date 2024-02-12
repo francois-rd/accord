@@ -1,12 +1,11 @@
 from typing import Callable, List, Optional
-import os
 
 from tqdm import tqdm
 
-from ..configs import BeamSearchConfig, GeneralConfig, ResourcesConfig
+from ..configs import BeamSearchConfig, GeneralConfig, ResourcesConfig, update
 from ...base import QAData
 from ...components import TermFormatter
-from ...io import ForestIO, load_relations_csv, save_dataclass_jsonl
+from ...io import load_forest_jsonl, load_relations_csv, save_dataclass_jsonl
 from ...transforms import BasicQAGroupTransform, MappingDistanceFunc
 
 
@@ -40,20 +39,14 @@ def factory(
                 mapping_distance_fn=mapping_distance_fn,
             )
 
-            forest_io = ForestIO(
-                dir_path=self.resources.forest_and_group_dir,
-                family_file_name=self.resources.forest_families_file,
-                data_file_name=self.resources.forest_data_file,
-            )
             disable = not self.general.verbose
             for qa_data in tqdm(qa_dataset_loader(), desc="Progress", disable=disable):
-                forest = forest_io.load_jsonl(qa_data)
-                file_path = os.path.join(
-                    self.resources.forest_and_group_dir,
-                    qa_data.identifier,
-                    self.resources.group_file,
-                )
-                groups = [g for f in forest.families for g in transform(qa_data, f)]
-                save_dataclass_jsonl(file_path, *groups)
+                with update(self.resources, qa_data) as resources:
+                    forest = load_forest_jsonl(
+                        family_file_path=resources.forest_families_file,
+                        data_file_path=resources.forest_data_file,
+                    )
+                    groups = [g for f in forest.families for g in transform(qa_data, f)]
+                    save_dataclass_jsonl(resources.group_file, *groups)
 
     return Generator

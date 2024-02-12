@@ -1,9 +1,8 @@
 from typing import Callable, Dict, Iterable, List, Optional
-import os
 
 from tqdm import tqdm
 
-from .configs import GeneralConfig, QAPromptSurfacerConfig, ResourcesConfig
+from .configs import GeneralConfig, QAPromptSurfacerConfig, ResourcesConfig, update
 from ..base import (
     InstantiationForest,
     QAData,
@@ -25,8 +24,8 @@ from ..components import (
     TextSurfacer,
 )
 from ..io import (
-    ForestIO,
     load_dataclass_jsonl,
+    load_forest_jsonl,
     load_relations_csv,
     save_dataclass_jsonl,
 )
@@ -128,28 +127,15 @@ def factory(
         def run(self):
             relations = load_relations_csv(self.resources.relations_file)
             relation_map = {r.type_: r for r in relations}
-            forest_io = ForestIO(
-                dir_path=self.resources.forest_and_group_dir,
-                family_file_name=self.resources.forest_families_file,
-                data_file_name=self.resources.forest_data_file,
-            )
-
             disable = not self.general.verbose
             for qa_data in tqdm(qa_dataset_loader(), desc="Progress", disable=disable):
-                forest = forest_io.load_jsonl(qa_data)
-                file_path = os.path.join(
-                    self.resources.forest_and_group_dir,
-                    qa_data.identifier,
-                    self.resources.group_file,
-                )
-                groups = load_dataclass_jsonl(file_path, t=QAGroup)
-
-                file_path = os.path.join(
-                    self.resources.forest_and_group_dir,
-                    qa_data.identifier,
-                    self.resources.llm_results_file,
-                )
-                results = self._do_run(qa_data, forest, groups, relation_map)
-                save_dataclass_jsonl(file_path, *results)
+                with update(self.resources, qa_data) as resources:
+                    forest = load_forest_jsonl(
+                        family_file_path=resources.forest_families_file,
+                        data_file_path=resources.forest_data_file,
+                    )
+                    groups = load_dataclass_jsonl(resources.group_file, t=QAGroup)
+                    results = self._do_run(qa_data, forest, groups, relation_map)
+                    save_dataclass_jsonl(resources.llm_results_file, *results)
 
     return Generator

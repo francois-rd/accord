@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
-from typing import List
+from contextlib import contextmanager
+from typing import List, Optional
 
+from ..base import QAData
 from ..components import BeamSearchProtocol
 
 
@@ -14,38 +16,58 @@ class ResourcesConfig:
     # Top level directory for resources and data.
     root_dir: str = "data"
 
-    # Next level directories.
-    trees_dir: str = "${root_dir}/trees"
+    # Input dataset/database directories.
     qa_dataset_dir: str = "${root_dir}/${qa_dataset}"
     term_database_dir: str = "${root_dir}/${term_database}"
     qa_dataset: str = ""
     term_database: str = ""
 
     # GenericTree directory and data.
-    generic_trees_dir: str = "${trees_dir}/generic_trees"
+    generic_trees_dir: str = "${root_dir}/generic_trees"
     generic_trees_file: str = "${generic_trees_dir}/${tree_size}.jsonl"
 
-    # Directories for instantiating generic trees with particular QA/term data.
-    instantiation: str = "${qa_dataset}_and_${term_database}"
-    instantiation_dir: str = "${trees_dir}/${instantiation}"
+    # Directories for instantiating generic trees with particular QA/term data
+    # and transforming the results.
+    all_results_dir: str = "${root_dir}/results"
+    result: str = "${qa_dataset}_and_${term_database}"
+    result_dir: str = "${all_results_dir}/${result}"
 
     # Relation and reduction data needed for a Reducer.
-    relations_file: str = "${instantiation_dir}/relations.csv"
-    reductions_file: str = "${instantiation_dir}/reductions.csv"
+    relations_file: str = "${result_dir}/relations.csv"
+    reductions_file: str = "${result_dir}/reductions.csv"
 
     # RelationalTree directory and data.
-    relational_trees_dir: str = "${instantiation_dir}/relational_trees"
+    relational_trees_dir: str = "${result_dir}/relational_trees"
     relational_trees_file: str = "${relational_trees_dir}/${tree_size}.jsonl"
 
-    # InstantiationForest and QAGroup directory and data.
-    forest_and_group_dir: str = "${instantiation_dir}/forest_and_group_${tree_size}"
-    forest_families_file: str = "families.jsonl"
-    forest_data_file: str = "data.jsonl"
-    group_file: str = "groups.jsonl"
-    llm_results_file: str = "llm_results.json"
+    # QAData directory and data.
+    qa_temp_dir: Optional[str] = None
+    qa_data_dir: str = "${result_dir}/qa_data/${tree_size}/${qa_temp_dir}"
 
-    # Size of tree (number of ReasoningTemplates) to handle.
+    # InstantiationForest directory and data.
+    forest_dir: str = "${qa_data_dir}/forests"
+    forest_families_file: str = "${forest_dir}/families.jsonl"
+    forest_data_file: str = "${forest_dir}/data.jsonl"
+
+    # InstantiationForest directory and data.
+    group_dir: str = "${qa_data_dir}/groups"
+    group_file: str = "${group_dir}/groups.jsonl"
+
+    # InstantiationForest directory and data.
+    llm_results_dir: str = "${qa_data_dir}/llm_results"
+    llm_results_file: str = "${llm_results_dir}/llm_results.jsonl"
+
+    # Size of tree (number of ReasoningTemplates).
     tree_size: int = 2
+
+
+@contextmanager
+def update(resources: ResourcesConfig, qa_data: QAData):
+    resources.qa_temp_dir = qa_data.identifier
+    try:
+        yield resources
+    finally:
+        resources.qa_temp_dir = None
 
 
 @dataclass

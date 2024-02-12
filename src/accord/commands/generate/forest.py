@@ -2,11 +2,22 @@ from typing import Callable, List
 
 from tqdm import tqdm
 
-from ..configs import BeamSearchConfig, GeneralConfig, ReducerConfig, ResourcesConfig
 from ...base import RelationalTree, QAData
 from ...components import BeamSearch, Instantiator, QueryResultSorter, TermFormatter
 from ...transforms import ForestTransform
-from ...io import ForestIO, load_dataclass_jsonl, load_reducer_csv, load_relations_csv
+from ...io import (
+    load_dataclass_jsonl,
+    load_reducer_csv,
+    load_relations_csv,
+    save_forest_jsonl,
+)
+from ..configs import (
+    BeamSearchConfig,
+    GeneralConfig,
+    ReducerConfig,
+    ResourcesConfig,
+    update,
+)
 
 
 def placeholder(
@@ -75,13 +86,13 @@ def factory(
             )
 
             # For each QAData, transform all trees, then save.
-            forest_io = ForestIO(
-                dir_path=self.resources.forest_and_group_dir,
-                family_file_name=self.resources.forest_families_file,
-                data_file_name=self.resources.forest_data_file,
-            )
             disable = not self.general.verbose
             for qa_data in tqdm(qa_dataset, desc="Progress", disable=disable):
-                forest_io.save_jsonl(qa_data, transform(trees, qa_data))
+                with update(self.resources, qa_data) as resources:
+                    save_forest_jsonl(
+                        family_file_path=resources.forest_families_file,
+                        data_file_path=resources.forest_data_file,
+                        forest=transform(trees, qa_data),
+                    )
 
     return Generator

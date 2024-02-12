@@ -13,7 +13,6 @@ from .base import (
     InstantiationData,
     InstantiationFamily,
     InstantiationForest,
-    QAData,
     Relation,
     RelationalCaseLink,
 )
@@ -134,23 +133,23 @@ def load_reducer_csv(
     return reducer
 
 
-class ForestIO:
-    def __init__(self, dir_path: str, family_file_name: str, data_file_name: str):
-        self.dir_path = dir_path
-        self.family_file_name = family_file_name
-        self.data_file_name = data_file_name
+def save_forest_jsonl(
+    family_file_path: str,
+    data_file_path: str,
+    forest: InstantiationForest,
+    **kwargs,
+):
+    save_dataclass_jsonl(family_file_path, *forest.families, **kwargs)
+    save_dataclass_jsonl(data_file_path, *forest.data_map.values(), **kwargs)
 
-    def save_jsonl(self, qa_data: QAData, forest: InstantiationForest, **kwargs):
-        family = os.path.join(self.dir_path, qa_data.identifier, self.family_file_name)
-        data = os.path.join(self.dir_path, qa_data.identifier, self.data_file_name)
-        save_dataclass_jsonl(family, *forest.families, **kwargs)
-        save_dataclass_jsonl(data, *forest.data_map.values(), **kwargs)
 
-    def load_jsonl(self, qa_data: QAData, **kwargs) -> InstantiationForest:
-        family = os.path.join(self.dir_path, qa_data.identifier, self.family_file_name)
-        data = os.path.join(self.dir_path, qa_data.identifier, self.data_file_name)
-        families = load_dataclass_jsonl(family, t=InstantiationFamily, **kwargs)
-        inst_data = load_dataclass_jsonl(data, t=InstantiationData, **kwargs)
-        forest = InstantiationForest(families, {d.identifier: d for d in inst_data})
-        forest.map_family_data()
-        return forest
+def load_forest_jsonl(
+    family_file_path: str,
+    data_file_path: str,
+    **kwargs,
+) -> InstantiationForest:
+    fams = load_dataclass_jsonl(family_file_path, t=InstantiationFamily, **kwargs)
+    data = load_dataclass_jsonl(data_file_path, t=InstantiationData, **kwargs)
+    forest = InstantiationForest(fams, {d.identifier: d for d in data})
+    forest.map_family_data()
+    return forest
