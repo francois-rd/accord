@@ -6,12 +6,19 @@ import os
 import coma
 
 from accord.base import QAData
-from accord.components import SemanticDistanceSorter, RandomUnSorter
-from accord.commands import preprocess, generate, configs as cfgs
+from accord.commands import preprocess, generate, prompt, configs as cfgs
+from accord.transforms import mapping_distance_factory
 from accord.io import load_dataclass_jsonl
+from accord.components import (
+    default_duplicate_template_fn,
+    DummyLLM,
+    SemanticDistanceSorter,
+    RandomUnSorter,
+)
 from accord.databases.conceptnet import (
     ConceptNet,
     ConceptNetInstantiator,
+    ConceptNetFormatter,
     InstantiatorVariant,
 )
 
@@ -21,9 +28,11 @@ beam_search = ConfigData("beam_search", cfgs.BeamSearchConfig)
 conceptnet = ConfigData("conceptnet", preprocess.conceptnet.ConceptNetConfig)
 csqa = ConfigData("csqa", preprocess.csqa.CSQAConfig)
 general = ConfigData("general", cfgs.GeneralConfig)
+mapping_distance = ConfigData("mapping_distance", cfgs.MappingDistanceConfig)
 reducer = ConfigData("reducer", cfgs.ReducerConfig)
 resources = ConfigData("resources", cfgs.ResourcesConfig)
 sorter = ConfigData("sorter", cfgs.SorterConfig)
+surfacer = ConfigData("surfacer", cfgs.QAPromptSurfacerConfig)
 
 
 def as_dict(*cfgs_data: ConfigData):
@@ -104,6 +113,63 @@ def forest_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
 
 
 @coma.hooks.hook
+def group_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
+    # Grab the initialized configs.
+    srcs_cfg: cfgs.ResourcesConfig = configs[resources.id_]
+    dist_cfg: cfgs.MappingDistanceConfig = configs[mapping_distance.id_]
+    csqa_cfg: preprocess.csqa.CSQAConfig = configs[csqa.id_]
+
+    # Remove the superfluous configs from the initialization of the command.
+    init_hook = coma.hooks.init_hook.positional_factory(mapping_distance.id_, csqa.id_)
+
+    # Use the factory to create an appropriate mapping distance function (if any).
+    fn = None
+    if dist_cfg.use_mapping_distance:
+        fn = mapping_distance_factory(
+            target_distances=dist_cfg.target_distances,
+            count_answer_ids=dist_cfg.count_answer_ids,
+            count_pairing_ids=dist_cfg.count_pairing_ids,
+        )
+
+    # Use the factory to create an appropriate command.
+    converted_file = os.path.join(srcs_cfg.qa_dataset_dir, csqa_cfg.converted_data_file)
+    command = generate.group.factory(
+        qa_dataset_loader=lambda: load_dataclass_jsonl(converted_file, QAData),
+        formatter_loader=lambda: ConceptNetFormatter(),
+        language=csqa_cfg.language,
+        mapping_distance_fn=fn,
+    )
+
+    # Initialize the command.
+    return init_hook(command=command, configs=configs)
+
+
+@coma.hooks.hook
+def prompt_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
+    # Grab the initialized configs.
+    srcs_cfg: cfgs.ResourcesConfig = configs[resources.id_]
+    csqa_cfg: preprocess.csqa.CSQAConfig = configs[csqa.id_]
+
+    # Remove the superfluous configs from the initialization of the command.
+    init_hook = coma.hooks.init_hook.positional_factory(csqa.id_)
+
+    # Use the factory to create an appropriate duplicate template function (if any).
+    fn = default_duplicate_template_fn
+
+    # Use the factory to create an appropriate command.
+    converted_file = os.path.join(srcs_cfg.qa_dataset_dir, csqa_cfg.converted_data_file)
+    command = prompt.factory(
+        qa_dataset_loader=lambda: load_dataclass_jsonl(converted_file, QAData),
+        un_formatter_loader=lambda: None,
+        llm_loader=lambda: DummyLLM("Dummy"),
+        duplicate_template_fn=fn,
+    )
+
+    # Initialize the command.
+    return init_hook(command=command, configs=configs)
+
+
+@coma.hooks.hook
 def pre_run_hook(known_args):
     if known_args.dry_run:
         print("Dry run.")
@@ -145,7 +211,7 @@ if __name__ == "__main__":
         **as_dict(csqa),
     )
 
-    # Tree generation commands (either directly or via transforms).
+    # Generation commands.
     coma.register("generate.generic", generate.generic.generate)
     coma.register("generate.relational", generate.relational.Generate)
     with coma.forget(init_hook=True):
@@ -155,6 +221,21 @@ if __name__ == "__main__":
             init_hook=forest_csqa_conceptnet_init_hook,
             **as_dict(general, beam_search, reducer, csqa, conceptnet, sorter),
         )
+    with coma.forget(init_hook=True):
+        coma.register(
+            "generate.group.csqa.conceptnet",
+            generate.group.placeholder,
+            init_hook=group_csqa_conceptnet_init_hook,
+            **as_dict(general, beam_search, mapping_distance, csqa),
+        )
 
+    # Prompt commands.
+    with coma.forget(init_hook=True):
+        coma.register(
+            "prompt.csqa.conceptnet",
+            prompt.placeholder,
+            init_hook=prompt_csqa_conceptnet_init_hook,
+            **as_dict(general, surfacer, csqa),
+        )
     # Run.
     coma.wake()
