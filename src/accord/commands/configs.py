@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 
 from ..components import BeamSearchProtocol
 
@@ -36,8 +37,12 @@ class ResourcesConfig:
     relational_trees_dir: str = "${instantiation_dir}/relational_trees"
     relational_trees_file: str = "${relational_trees_dir}/${tree_size}.jsonl"
 
-    # InstantiationForest directory.
-    forest_dir: str = "${instantiation_dir}/forest_${tree_size}"
+    # InstantiationForest and QAGroup directory and data.
+    forest_and_group_dir: str = "${instantiation_dir}/forest_and_group_${tree_size}"
+    forest_families_file: str = "families.jsonl"
+    forest_data_file: str = "data.jsonl"
+    group_file: str = "groups.jsonl"
+    llm_results_file: str = "llm_results.json"
 
     # Size of tree (number of ReasoningTemplates) to handle.
     tree_size: int = 2
@@ -62,3 +67,65 @@ class SorterConfig:
     semantic_distance_calculator: str = ""
     semantic_distance_aggregator: str = "sum"
     random_seed: int = 314159
+
+
+@dataclass
+class MappingDistanceConfig:
+    use_mapping_distance: bool = False
+    target_distances: List[int] = field(default_factory=lambda: [-1])
+    count_answer_ids: bool = False
+    count_pairing_ids: bool = False
+
+
+@dataclass
+class TemplateSequencerConfig:
+    chosen_answer_position: int = -1
+    shuffle_tree_order: bool = False
+    shuffle_within_tree_template_order: bool = False
+    shuffle_between_tree_template_order: bool = False
+    remove_duplicate_templates: bool = False
+
+
+@dataclass
+class SurfacerConfig:
+    prefix: str = ""
+
+
+@dataclass
+class TextSurfacerConfig(SurfacerConfig):
+    text: str = ""
+
+
+@dataclass
+class TemplateSequenceSurfacerConfig(SurfacerConfig):
+    template_separator: str = "\n"
+    surfacer: SurfacerConfig = field(
+        default_factory=lambda: SurfacerConfig("- ")
+    )
+    sequencer: TemplateSequencerConfig = field(
+        default_factory=lambda: TemplateSequencerConfig()
+    )
+
+
+@dataclass
+class QADataSurfacerConfig(SurfacerConfig):
+    question_answer_separator: str = "\n"
+    answer_choice_separator: str = "    "
+    answer_choice_formatter: str = "{}: {}"
+
+
+@dataclass
+class QAPromptSurfacerConfig(SurfacerConfig):
+    surfacer_separator: str = "\n"
+    prefix_surfacer: TextSurfacerConfig = field(
+        default_factory=lambda: TextSurfacerConfig("Instructions:\n")
+    )
+    template_sequence_surfacer: TemplateSequenceSurfacerConfig = field(
+        default_factory=lambda: TemplateSequenceSurfacerConfig("Statements:\n")
+    )
+    qa_data_surfacer: QADataSurfacerConfig = field(
+        default_factory=lambda: QADataSurfacerConfig("Question:\n")
+    )
+    suffix_surfacer: TextSurfacerConfig = field(
+        default_factory=lambda: TextSurfacerConfig("Answer:\n")
+    )
