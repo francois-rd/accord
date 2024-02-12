@@ -226,7 +226,7 @@ class BasicQAGroupTransform:
 
             data_ids = {qa_data.correct_answer_label: correct.identifier}
             data_map = {qa_data.correct_answer_label: None}
-            for (label, term), data in zip(other_choices, batch):
+            for (label, term), data in zip(other_choices.items(), batch):
                 data_ids[label] = data.identifier
                 data_map[label] = deepcopy(data.mapping)
                 data_map[label][data.answer_id] = self._format(term)
