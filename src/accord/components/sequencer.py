@@ -84,10 +84,11 @@ class TemplateSequencer:
 
         # If desired, remove duplicate templates.
         if self.remove_duplicate_templates:
-            to_remove = set()
+            to_remove = []
             for r1, r2 in combinations(results, 2):
                 if self.duplicate_template_fn(r1.template, r2.template):
-                    to_remove.add(r2)
+                    if r2 not in to_remove:
+                        to_remove.append(r2)
             results = [result for result in results if result not in to_remove]
 
         # Return the final sequence of templates.
