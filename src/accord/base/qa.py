@@ -69,5 +69,4 @@ class QAGroup:
 @dataclass
 class QAPrompt:
     qa_data: QAData
-    qa_group: QAGroup
     tree_map: Dict[Label, Tree]
