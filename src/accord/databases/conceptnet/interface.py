@@ -7,7 +7,19 @@ from ...base import RelationType, Term
 from ...components import TermFormatter
 
 
-class ConceptNet(TermFormatter):
+class ConceptNetFormatter(TermFormatter):
+    def format(self, term: Term, language: str, *args, **kwargs) -> Term:
+        if term.startswith(f"/c/{language}/"):
+            # Term is already probably formatted correctly. Still, have it be
+            # in lowercase and without spaces just in case.
+            return term.lower().replace(" ", "_")
+        elif term.startswith("/c/"):
+            raise ValueError(f"Mismatch for term={term} and language={language}.")
+        else:
+            return f"/c/{language}/{term.lower().replace(' ', '_')}"
+
+
+class ConceptNet(ConceptNetFormatter):
     def __init__(self, input_dir: str, relation_map: Dict[str, RelationType]):
         self.df_map = {}
         for path, _, files in os.walk(input_dir):
@@ -25,16 +37,6 @@ class ConceptNet(TermFormatter):
 
     def get_all_assertions(self) -> Dict[RelationType, pd.DataFrame]:
         return self.df_map
-
-    def format(self, term: Term, language: str, *args, **kwargs) -> Term:
-        if term.startswith(f"/c/{language}/"):
-            # Term is already probably formatted correctly. Still, have it be
-            # in lowercase and without spaces just in case.
-            return term.lower().replace(" ", "_")
-        elif term.startswith("/c/"):
-            raise ValueError(f"Mismatch for term={term} and language={language}.")
-        else:
-            return f"/c/{language}/{term.lower().replace(' ', '_')}"
 
     def get_relations(self, node: str, other: str) -> Iterable[RelationType]:
         for relation_type, df in self.df_map.items():
