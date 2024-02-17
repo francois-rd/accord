@@ -119,10 +119,22 @@ class TextSurfacerConfig(SurfacerConfig):
 
 
 @dataclass
+class TermSurfacerConfig(SurfacerConfig):
+    suffix: str = ""
+
+
+@dataclass
+class TemplateSurfacerConfig(SurfacerConfig):
+    term_surfacer: TermSurfacerConfig = field(
+        default_factory=lambda: TermSurfacerConfig("[", "]")
+    )
+
+
+@dataclass
 class TemplateSequenceSurfacerConfig(SurfacerConfig):
     template_separator: str = "\n"
-    surfacer: SurfacerConfig = field(
-        default_factory=lambda: SurfacerConfig("- ")
+    template_surfacer: TemplateSurfacerConfig = field(
+        default_factory=lambda: TemplateSurfacerConfig("- ")
     )
     sequencer: TemplateSequencerConfig = field(
         default_factory=lambda: TemplateSequencerConfig()

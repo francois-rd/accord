@@ -19,6 +19,7 @@ from accord.databases.conceptnet import (
     ConceptNet,
     ConceptNetInstantiator,
     ConceptNetFormatter,
+    ConceptNetUnFormatter,
     InstantiatorVariant,
 )
 
@@ -160,7 +161,7 @@ def prompt_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
     converted_file = os.path.join(srcs_cfg.qa_dataset_dir, csqa_cfg.converted_data_file)
     command = prompt.factory(
         qa_dataset_loader=lambda: load_dataclass_jsonl(converted_file, QAData),
-        un_formatter_loader=lambda: None,
+        un_formatter_loader=lambda: ConceptNetUnFormatter(),
         llm_loader=lambda: DummyLLM("Dummy"),
         duplicate_template_fn=fn,
     )

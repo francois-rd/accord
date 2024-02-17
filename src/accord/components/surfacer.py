@@ -29,14 +29,39 @@ class TextSurfacer(Surfacer):
         return self.prefix + self.text
 
 
+class TermSurfacer(Surfacer):
+    def __init__(
+        self,
+        prefix: str,
+        suffix: str,
+        un_formatter: Optional[TermUnFormatter] = None,
+    ):
+        super().__init__(prefix)
+        self.suffix = suffix
+        self.un_formatter = un_formatter
+
+    def __call__(self, *args, **kwargs) -> str:
+        # Grab the Term.
+        if "term" not in kwargs:
+            raise KeyError("No Term provided for surfacing.")
+        term = kwargs["term"]
+
+        # Optionally, unformat the term.
+        if self.un_formatter is not None:
+            term = self.un_formatter.unformat(*args, **kwargs)  # Kwargs has 'term'.
+
+        # Surface the term.
+        return self.prefix + term + self.suffix
+
+
 class TemplateSurfacer(Surfacer):
     def __init__(
         self,
         prefix: str,
-        un_formatter: Optional[TermUnFormatter] = None,
+        term_surfacer: Surfacer,
     ):
         super().__init__(prefix)
-        self.un_formatter = un_formatter
+        self.surfacer = term_surfacer
         self.pos_neg_pattern = re.compile(r"(\[\[(.+?)\|(.+?)]])")
 
     def __call__(
@@ -51,15 +76,11 @@ class TemplateSurfacer(Surfacer):
             raise KeyError("No PromptGroupSequencerResult provided for surfacing.")
         result: TemplateSequencerResult = kwargs["result"]
 
-        # Optionally unformat the source and target terms.
-        source_term = result.template.source.term
-        if self.un_formatter is not None:
-            source_term = self.un_formatter.unformat(source_term, *args, **kwargs)
-        target_term = result.template.target.term
-        if self.un_formatter is not None:
-            target_term = self.un_formatter.unformat(target_term, *args, **kwargs)
+        # Surface the source and target terms.
+        source_term = self.surfacer(*args, term=result.template.source.term, **kwargs)
+        target_term = self.surfacer(*args, term=result.template.target.term, **kwargs)
 
-        # Format the surface form using the source and target terms.
+        # Format the surface form using the surfaced source and target terms.
         text = result.template.relation.surface_form.format(source_term, target_term)
 
         # Find all positive/negative variations in the surface form of the template.
@@ -88,12 +109,12 @@ class TemplateSequenceSurfacer(Surfacer):
         self,
         prefix: str,
         template_separator: str,
-        surfacer: TemplateSurfacer,
+        template_surfacer: Surfacer,
         sequencer: TemplateSequencer,
     ):
         super().__init__(prefix)
         self.sequencer = sequencer
-        self.surfacer = surfacer
+        self.surfacer = template_surfacer
         self.template_separator = template_separator
 
     def __call__(

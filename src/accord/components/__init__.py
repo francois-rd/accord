@@ -21,5 +21,6 @@ from .surfacer import (
     Surfacer,
     TemplateSurfacer,
     TemplateSequenceSurfacer,
+    TermSurfacer,
     TextSurfacer,
 )

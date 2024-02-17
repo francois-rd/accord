@@ -24,6 +24,7 @@ from ..components import (
     TemplateSequenceSurfacer,
     TemplateSurfacer,
     TermUnFormatter,
+    TermSurfacer,
     TextSurfacer,
 )
 from ..io import (
@@ -85,9 +86,13 @@ def factory(
                         remove_duplicate_templates=seq.remove_duplicate_templates,
                         duplicate_template_fn=duplicate_template_fn,
                     ),
-                    surfacer=TemplateSurfacer(
-                        prefix=seq_surfacer.surfacer.prefix,
-                        un_formatter=un_formatter_loader(),
+                    template_surfacer=TemplateSurfacer(
+                        prefix=seq_surfacer.template_surfacer.prefix,
+                        term_surfacer=TermSurfacer(
+                            prefix=seq_surfacer.template_surfacer.term_surfacer.prefix,
+                            suffix=seq_surfacer.template_surfacer.term_surfacer.suffix,
+                            un_formatter=un_formatter_loader(),
+                        ),
                     ),
                 ),
                 qa_data_surfacer=QADataSurfacer(

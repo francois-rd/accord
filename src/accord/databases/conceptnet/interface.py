@@ -1,10 +1,11 @@
 from typing import Dict, Iterable
 import os
+import re
 
 import pandas as pd
 
 from ...base import RelationType, Term
-from ...components import TermFormatter
+from ...components import TermFormatter, TermUnFormatter
 
 
 class ConceptNetFormatter(TermFormatter):
@@ -19,8 +20,20 @@ class ConceptNetFormatter(TermFormatter):
             return f"/c/{language}/{term.lower().replace(' ', '_')}"
 
 
-class ConceptNet(ConceptNetFormatter):
+class ConceptNetUnFormatter(TermUnFormatter):
+    def __init__(self):
+        self.pattern = re.compile("/c/../([^/]+)")
+
+    def unformat(self, term: Term, *args, **kwargs) -> Term:
+        match = self.pattern.match(term)
+        if match is None:
+            return term
+        return match.group(1).replace("_", " ")
+
+
+class ConceptNet(ConceptNetFormatter, ConceptNetUnFormatter):
     def __init__(self, input_dir: str, relation_map: Dict[str, RelationType]):
+        super().__init__()
         self.df_map = {}
         for path, _, files in os.walk(input_dir):
             for file in files:
