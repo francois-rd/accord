@@ -9,6 +9,7 @@ from ..components import BeamSearchProtocol
 @dataclass
 class GeneralConfig:
     verbose: bool = False
+    random_seed: int = 314159
 
 
 @dataclass
@@ -71,6 +72,14 @@ def update(resources: ResourcesConfig, qa_data: QAData):
 
 
 @dataclass
+class FilterConfig:
+    generic_prob: float = 0.0
+    relational_prob: float = 0.0
+    pairing_prob: float = 0.0
+    anti_factual_prob: float = 0.0
+
+
+@dataclass
 class ReducerConfig:
     ignore: bool = False
     raise_on_dup: bool = True
@@ -88,7 +97,6 @@ class SorterConfig:
     semantic_distance_target: float = 0.0
     semantic_distance_calculator: str = ""
     semantic_distance_aggregator: str = "sum"
-    random_seed: int = 314159
 
 
 @dataclass

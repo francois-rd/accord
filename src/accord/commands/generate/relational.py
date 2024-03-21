@@ -2,32 +2,43 @@ from typing import List, Iterable
 from itertools import product
 import networkx as nx
 
-from ..configs import ResourcesConfig
+from ..configs import FilterConfig, GeneralConfig, ResourcesConfig
 from ...base import GenericTree, RelationalTree
+from ...components import GeneratorFilter
 from ...transforms import RelationalTransform
 from ...io import save_dataclass_jsonl, load_dataclass_jsonl, load_relations_csv
 
 
 class Generate:
-    def __init__(self, resources: ResourcesConfig):
+    def __init__(
+        self,
+        resources: ResourcesConfig,
+        general: GeneralConfig,
+        filter_cfg: FilterConfig,
+    ):
         self.trees = load_dataclass_jsonl(resources.generic_trees_file, GenericTree)
         self.relations = load_relations_csv(resources.relations_file)
+        self.g_filter = GeneratorFilter(filter_cfg.relational_prob, general.random_seed)
         self.resources = resources
+        self.general = general
 
     def run(self):
         save_dataclass_jsonl(self.resources.relational_trees_file, *self._transform())
 
     def _transform(self) -> List[RelationalTree]:
         """Transform all trees."""
-        tree_groups = {}
-        for n_relations in product(self.relations, repeat=self.resources.tree_size):
+        tree_groups, tree_size = {}, self.resources.tree_size
+        for n_relations in self.g_filter(product(self.relations, repeat=tree_size)):
             transform = RelationalTransform(n_relations)
             group_key = tuple(sorted(set([r.type_ for r in n_relations])))
             for tree in self.trees:
                 new_tree = transform(tree)
                 if new_tree is not None:
                     tree_groups.setdefault(group_key, []).append(new_tree)
-        return list(self._remove_isomorphic_trees(tree_groups.values()))
+        trees = list(self._remove_isomorphic_trees(tree_groups.values()))
+        if self.general.verbose:
+            print(f"Total number of relation trees generated: {len(trees)}")
+        return trees
 
     def _remove_isomorphic_trees(
         self,

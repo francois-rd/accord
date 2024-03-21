@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, List, Set
+from typing import Dict, Iterable, List, Optional
 from itertools import product
 from enum import Enum
 
@@ -148,7 +148,7 @@ class BeamSearch:
                         query_existing_term=af_term,
                         **kwargs,
                     )
-                af_mapping[af_var] = self._clean_up()
+                af_mapping[af_var] = self._clean_up(override_top_k=1)
 
             # Given a specific factual mapping, af_mapping now contains all possible
             # valid AF instantiations of each AF variable. Yield a new mapping for each
@@ -178,7 +178,7 @@ class BeamSearch:
         fixed_mapping: InstantiationMap,
         *args,
         **kwargs,
-    ) -> Dict[VarId, Set[Term]]:
+    ) -> Dict[VarId, List[Term]]:
         # Find frontier variables (variables whose relational partner is fixed).
         frontier_variables = {}
         for template in tree.templates:
@@ -214,9 +214,10 @@ class BeamSearch:
             candidate_mapping[frontier_var] = self._clean_up()
         return candidate_mapping
 
-    def _clean_up(self) -> Set[Term]:
+    def _clean_up(self, override_top_k: Optional[int] = None) -> List[Term]:
+        top_k = self.top_k if override_top_k is None else override_top_k
         results = self.sorter.sort_collection()
-        return set(results[: self.top_k] if 0 < self.top_k < len(results) else results)
+        return results[: top_k] if 0 < top_k < len(results) else results
 
     def _is_valid_mapping(
         self,

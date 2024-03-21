@@ -1,3 +1,4 @@
+from .filter import GeneratorFilter
 from .formatter import TermFormatter, TermUnFormatter
 from .instantiator import Instantiator, InstantiatorVariant, Query, QueryResult
 from .llm import DummyLLM, LLM, LLMResult

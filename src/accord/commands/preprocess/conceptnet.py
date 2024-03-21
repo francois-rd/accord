@@ -35,7 +35,7 @@ class ConceptNetConfig:
 
 
 def preprocess(
-    general: GeneralConfig, resources: ResourcesConfig, cfg: ConceptNetConfig
+    resources: ResourcesConfig, general: GeneralConfig, cfg: ConceptNetConfig
 ):
     # Merge resource paths.
     raw_data_file = os.path.join(resources.term_database_dir, cfg.raw_data_file)

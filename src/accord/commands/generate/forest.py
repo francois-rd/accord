@@ -3,8 +3,14 @@ from typing import Callable, List
 from tqdm import tqdm
 
 from ...base import RelationalTree, QAData
-from ...components import BeamSearch, Instantiator, QueryResultSorter, TermFormatter
 from ...transforms import ForestTransform
+from ...components import (
+    BeamSearch,
+    GeneratorFilter,
+    Instantiator,
+    QueryResultSorter,
+    TermFormatter,
+)
 from ...io import (
     load_dataclass_jsonl,
     load_reducer_csv,
@@ -13,6 +19,7 @@ from ...io import (
 )
 from ..configs import (
     BeamSearchConfig,
+    FilterConfig,
     GeneralConfig,
     ReducerConfig,
     ResourcesConfig,
@@ -25,6 +32,7 @@ def placeholder(
     __: GeneralConfig,
     ___: BeamSearchConfig,
     ____: ReducerConfig,
+    _____: FilterConfig,
 ):
     pass
 
@@ -44,11 +52,13 @@ def factory(
             general: GeneralConfig,
             beam_search_cfg: BeamSearchConfig,
             reducer_cfg: ReducerConfig,
+            filter_cfg: FilterConfig,
         ):
             self.resources = resources
             self.general = general
             self.beam_search_cfg = beam_search_cfg
             self.reducer_cfg = reducer_cfg
+            self.filter_cfg = filter_cfg
 
         def run(self):
             # Load the relationally-transformed trees as well as all the dataset.
@@ -77,12 +87,16 @@ def factory(
             )
 
             # Load the forest transform.
+            seed = self.general.random_seed
             transform = ForestTransform(
                 reducer=reducer,
                 beam_search=beam_search,
                 protocol=self.beam_search_cfg.protocol,
                 formatter=formatter_loader(),
                 language=language,
+                pairing_filter=GeneratorFilter(self.filter_cfg.pairing_prob, seed),
+                anti_factual_filter=GeneratorFilter(self.filter_cfg.anti_factual_prob),
+                verbose=self.general.verbose
             )
 
             # For each QAData, transform all trees, then save.

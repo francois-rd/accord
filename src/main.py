@@ -28,6 +28,7 @@ ConfigData = namedtuple("ConfigData", "id_ type_")
 beam_search = ConfigData("beam_search", cfgs.BeamSearchConfig)
 conceptnet = ConfigData("conceptnet", preprocess.conceptnet.ConceptNetConfig)
 csqa = ConfigData("csqa", preprocess.csqa.CSQAConfig)
+filt = ConfigData("filter", cfgs.FilterConfig)
 general = ConfigData("general", cfgs.GeneralConfig)
 mapping_distance = ConfigData("mapping_distance", cfgs.MappingDistanceConfig)
 reducer = ConfigData("reducer", cfgs.ReducerConfig)
@@ -43,6 +44,7 @@ def as_dict(*cfgs_data: ConfigData):
 @coma.hooks.hook
 def forest_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
     # Grab the initialized configs.
+    general_cfg: cfgs.GeneralConfig = configs[general.id_]
     srcs_cfg: cfgs.ResourcesConfig = configs[resources.id_]
     csqa_cfg: preprocess.csqa.CSQAConfig = configs[csqa.id_]
     c_net_cfg: preprocess.conceptnet.ConceptNetConfig = configs[conceptnet.id_]
@@ -93,7 +95,7 @@ def forest_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
             distance_aggregator=aggregator,
         )
     elif sorter_cfg.sorter == "random":
-        random.seed(sorter_cfg.random_seed)
+        random.seed(general_cfg.random_seed)
         results_sorter = RandomUnSorter()
     else:
         raise ValueError(f"Unsupported value for sorter: {sorter_cfg.sorter}")
@@ -187,24 +189,24 @@ if __name__ == "__main__":
     coma.initiate(
         parser_hook=coma.hooks.sequence(coma.hooks.parser_hook.default, dry_run_hook),
         pre_run_hook=pre_run_hook,
-        **as_dict(resources),
+        **as_dict(resources, general),
     )
 
     # Data preprocessing commands.
     coma.register(
         "preprocess.conceptnet",
         preprocess.conceptnet.preprocess,
-        **as_dict(general, conceptnet),
+        **as_dict(conceptnet),
     )
     coma.register(
         "preprocess.csqa.infer",
         preprocess.csqa.infer,
-        **as_dict(general, csqa, conceptnet),
+        **as_dict(csqa, conceptnet),
     )
     coma.register(
         "preprocess.csqa.sample",
         preprocess.csqa.sample,
-        **as_dict(general, csqa),
+        **as_dict(csqa),
     )
     coma.register(
         "preprocess.csqa.convert",
@@ -213,21 +215,21 @@ if __name__ == "__main__":
     )
 
     # Generation commands.
-    coma.register("generate.generic", generate.generic.generate)
-    coma.register("generate.relational", generate.relational.Generate)
+    coma.register("generate.generic", generate.generic.generate, **as_dict(filt))
+    coma.register("generate.relational", generate.relational.Generate, **as_dict(filt))
     with coma.forget(init_hook=True):
         coma.register(
             "generate.forest.csqa.conceptnet",
             generate.forest.placeholder,
             init_hook=forest_csqa_conceptnet_init_hook,
-            **as_dict(general, beam_search, reducer, csqa, conceptnet, sorter),
+            **as_dict(beam_search, reducer, filt, csqa, conceptnet, sorter),
         )
     with coma.forget(init_hook=True):
         coma.register(
             "generate.group.csqa.conceptnet",
             generate.group.placeholder,
             init_hook=group_csqa_conceptnet_init_hook,
-            **as_dict(general, beam_search, mapping_distance, csqa),
+            **as_dict(beam_search, mapping_distance, csqa),
         )
 
     # Prompt commands.
@@ -236,7 +238,7 @@ if __name__ == "__main__":
             "prompt.csqa.conceptnet",
             prompt.placeholder,
             init_hook=prompt_csqa_conceptnet_init_hook,
-            **as_dict(general, surfacer, csqa),
+            **as_dict(surfacer, csqa),
         )
     # Run.
     coma.wake()

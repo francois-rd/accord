@@ -3,7 +3,6 @@ from itertools import combinations
 from dataclasses import replace
 from copy import deepcopy
 
-from ..components import BeamSearch, BeamSearchProtocol, Reducer, TermFormatter
 from ..base import (
     InstantiationData,
     InstantiationForest,
@@ -13,6 +12,13 @@ from ..base import (
     Template,
     Term,
     VarId,
+)
+from ..components import (
+    BeamSearch,
+    BeamSearchProtocol,
+    GeneratorFilter,
+    Reducer,
+    TermFormatter,
 )
 
 
@@ -24,12 +30,19 @@ class ForestTransform:
         protocol: BeamSearchProtocol,
         formatter: TermFormatter,
         language: str,
+        pairing_filter: GeneratorFilter,
+        anti_factual_filter: GeneratorFilter,
+        verbose: bool,
     ):
         self.reducer = reducer
         self.beam_search = beam_search
         self.protocol = protocol
         self.formatter = formatter
         self.language = language
+        self.pairing_filter = pairing_filter
+        self.anti_factual_filter = anti_factual_filter
+        self.verbose = verbose
+        self.non_default_answer = None
         self.data_id_counter = 0
 
     def __call__(
@@ -42,18 +55,37 @@ class ForestTransform:
         apply a sequence of Transforms to each tree, returning a ReasoningForest.
         """
         forest = InstantiationForest()
+        total_non_default_answer, total_non_default_inst, total_instantiations = 0, 0, 0
         for tree in trees:
             family = None  # This avoids adding families with no valid instantiations.
-            for pairing_data in self._all_pairings(tree, qa_data):
-                for anti_factual_ids in self._all_anti_factual_ids(tree, pairing_data):
+            for pairing_data in self.pairing_filter(self._all_pairings(tree, qa_data)):
+                if self.non_default_answer:
+                    total_non_default_answer += 1
+                for anti_factual_ids in self.anti_factual_filter(
+                    self._all_anti_factual_ids(tree, pairing_data)
+                ):
                     for full_data in self._instantiate_variables(
                         tree, pairing_data, anti_factual_ids, qa_data
                     ):
+                        total_instantiations += 1
+                        if self.non_default_answer:
+                            total_non_default_inst += 1
                         if family is None:
                             # Delay creating a new family until at least one valid hit.
                             family = forest.add_family(tree)
                         family.add(full_data.identifier)
                         forest.add_data(full_data)
+        if self.verbose:
+            print(
+                "Total number of pairings with non-default answer variable choice:",
+                total_non_default_answer
+            )
+            print(
+                "Total number of instantiations with "
+                "non-default answer variable choice:",
+                total_non_default_inst
+            )
+            print("Total number of instantiations:", total_instantiations)
         return forest
 
     def _all_pairings(
@@ -67,7 +99,12 @@ class ForestTransform:
                     answers = tree.unique_variable_ids() - {pairing[0]}
                 else:
                     answers = self.reducer.valid_answer_ids(tree, template, pairing[0])
+                if pairing[0] == template.source_id:
+                    default_answer = template.target_id
+                else:
+                    default_answer = template.source_id
                 for answer in answers:
+                    self.non_default_answer = answer != default_answer
                     yield InstantiationData(
                         pairing_template=deepcopy(template),
                         pairing=pairing,
