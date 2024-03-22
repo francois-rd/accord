@@ -65,6 +65,9 @@ def infer(
         question = datum["question"]
         node_word = concept_net.format(question["question_concept"], cfg.language)
         other_words = [choice["text"] for choice in question["choices"]]
+        if len(set(other_words)) != len(other_words):
+            # Ignore CSQA samples where the answer choices are not unique.
+            continue
         relations = []
         for other_word in other_words:
             other_word = concept_net.format(other_word, cfg.language)
