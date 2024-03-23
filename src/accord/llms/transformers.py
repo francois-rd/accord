@@ -9,9 +9,9 @@ class TransformersConfig:
     # RNG seed for replication of results.
     seed: int = 314159
 
-    # The prompt format to represent system instructions. Should contain a "{}"
-    # wherever the specific text of the __call__() method ought to be inserted.
-    system_prompt_format: str = "{}"
+    # The prompt for system instructions, or None for model that don't support the
+    # transformers.Pipeline chat templating functionality.
+    system_prompt: Optional[str] = None
 
     # Model quantization options for bitsandbytes.
     quantization: Optional[str] = None
@@ -22,16 +22,12 @@ class TransformersConfig:
         default_factory=lambda: {"trust_remote_code": True},
     )
 
-    # See transformers.AutoTokenizer.from_pretrained for details.
-    tokenizer_params: Dict[str, Any] = field(default_factory=dict)
-
     # See transformers.Pipeline for details.
-    # NOTE: Skip 'task', 'model', 'tokenizer', 'torch_dtype', which are handled
-    # specially.
+    # NOTE: Skip 'task', 'model', and 'torch_dtype', which are handled specially.
     pipeline_params: Dict[str, Any] = field(default_factory=dict)
 
     # See transformers.GenerationConfig for details.
-    generation_config: Dict[str, Any] = field(
+    generation_params: Dict[str, Any] = field(
         default_factory=lambda: {
             "return_full_text": False,
             "max_new_tokens": 5,
@@ -46,18 +42,18 @@ class TransformersLLM(LLM):
         import torch
         from transformers import (
             AutoModelForCausalLM,
-            AutoTokenizer,
             BitsAndBytesConfig,
-            GenerationConfig,
             pipeline,
             set_seed,
         )
 
+        # Basic initialization.
         set_seed(cfg.seed)
         super().__init__(model_name)
         self.cfg = cfg
-        self.gen_cfg = GenerationConfig(**self.cfg.generation_config)
 
+        # Quantization.
+        model_params = self.cfg.model_params
         if self.cfg.quantization is not None:
             if self.cfg.quantization == "8bit":
                 bnb_config = BitsAndBytesConfig(load_in_8bit=True)
@@ -68,27 +64,25 @@ class TransformersLLM(LLM):
                 )
             else:
                 raise ValueError(f"Unsupported quantization: {self.cfg.quantization}")
-            model = AutoModelForCausalLM.from_pretrained(
-                self.model_name,
-                quantization_config=bnb_config,
-                **self.cfg.model_params,
-            )
-        else:
-            model = AutoModelForCausalLM.from_pretrained(
-                self.model_name, **self.cfg.model_params,
-            )
-        tokenizer = AutoTokenizer.from_pretrained(
-            self.model_name, **self.cfg.tokenizer_params,
-        )
+            model_params.update({"quantization_config": bnb_config})
+
+        # Pipeline initialization.
         self.llm = pipeline(
             task="text-generation",
-            model=model,
-            tokenizer=tokenizer,
+            model=AutoModelForCausalLM.from_pretrained(self.model_name, **model_params),
             torch_dtype=torch.bfloat16,
             **self.cfg.pipeline_params,
         )
 
     def __call__(self, text: str, *args, **kwargs) -> LLMResult:
-        text = self.cfg.system_prompt_format.format(text)
-        output = self.llm(text, **self.gen_cfg.to_dict())
-        return LLMResult(output[0]['generated_text'])
+        if self.cfg.system_prompt is None:
+            prompt = text
+        else:
+            prompt = [
+                {"role": "system", "content": self.cfg.system_prompt},
+                {"role": "user", "content": text}
+            ]
+        output = self.llm(prompt, **self.cfg.generation_params)
+        if self.cfg.system_prompt is None:
+            return LLMResult(output[0]['generated_text'])
+        return LLMResult(output[0]['generated_text'][-1]["content"])
