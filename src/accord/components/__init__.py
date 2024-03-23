@@ -1,7 +1,7 @@
 from .filter import GeneratorFilter
 from .formatter import TermFormatter, TermUnFormatter
 from .instantiator import Instantiator, InstantiatorVariant, Query, QueryResult
-from .llm import DummyLLM, LLM, LLMResult
+from .llm import LLM, LLMResult
 from .reducer import Reducer, Reduction, ReductionOrder
 from .search import BeamSearch, BeamSearchProtocol
 from .sequencer import (

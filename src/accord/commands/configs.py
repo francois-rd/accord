@@ -55,11 +55,14 @@ class ResourcesConfig:
     group_file: str = "${group_dir}/groups.jsonl"
 
     # InstantiationForest directory and data.
-    llm_results_dir: str = "${qa_data_dir}/llm_results"
+    llm_results_dir: str = "${qa_data_dir}/llm_results/${llm}"
     llm_results_file: str = "${llm_results_dir}/llm_results.jsonl"
 
     # Size of tree (number of ReasoningTemplates).
     tree_size: int = 2
+
+    # Language model to use.
+    llm: str = "dummy"
 
 
 @contextmanager

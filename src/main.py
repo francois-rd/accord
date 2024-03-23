@@ -7,11 +7,10 @@ import coma
 
 from accord.base import QAData
 from accord.commands import preprocess, generate, prompt, configs as cfgs
-from accord.transforms import mapping_distance_factory
 from accord.io import load_dataclass_jsonl
+from accord.transforms import mapping_distance_factory
 from accord.components import (
     default_duplicate_template_fn,
-    DummyLLM,
     SemanticDistanceSorter,
     RandomUnSorter,
 )
@@ -21,6 +20,14 @@ from accord.databases.conceptnet import (
     ConceptNetFormatter,
     ConceptNetUnFormatter,
     InstantiatorVariant,
+)
+from accord.llms import (
+    DummyConfig,
+    DummyLLM,
+    OpenAIConfig,
+    OpenAILLM,
+    TransformersConfig,
+    TransformersLLM,
 )
 
 
@@ -35,6 +42,10 @@ reducer = ConfigData("reducer", cfgs.ReducerConfig)
 resources = ConfigData("resources", cfgs.ResourcesConfig)
 sorter = ConfigData("sorter", cfgs.SorterConfig)
 surfacer = ConfigData("surfacer", cfgs.QAPromptSurfacerConfig)
+
+dummy = ConfigData("dummy", DummyConfig)
+openai = ConfigData("openai", OpenAIConfig)
+transformers = ConfigData("transformers", TransformersConfig)
 
 
 def as_dict(*cfgs_data: ConfigData):
@@ -148,13 +159,27 @@ def group_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
 
 
 @coma.hooks.hook
-def prompt_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
+def prompt_csqa_conceptnet_init_hook(name: str, configs: Dict[str, Any]) -> Any:
+    # Grab the LLM info.
+    if "dummy" in name:
+        llm_cfg_id = dummy.id_
+        llm_class = DummyLLM
+    elif "openai" in name:
+        llm_cfg_id = openai.id_
+        llm_class = OpenAILLM
+    elif "transformers" in name:
+        llm_cfg_id = transformers.id_
+        llm_class = TransformersLLM
+    else:
+        raise ValueError(f"Unsupported prompt command: {name}")
+
     # Grab the initialized configs.
     srcs_cfg: cfgs.ResourcesConfig = configs[resources.id_]
     csqa_cfg: preprocess.csqa.CSQAConfig = configs[csqa.id_]
+    llm_cfg = configs[llm_cfg_id]
 
     # Remove the superfluous configs from the initialization of the command.
-    init_hook = coma.hooks.init_hook.positional_factory(csqa.id_)
+    init_hook = coma.hooks.init_hook.positional_factory(csqa.id_, llm_cfg_id)
 
     # Use the factory to create an appropriate duplicate template function (if any).
     fn = default_duplicate_template_fn
@@ -164,7 +189,7 @@ def prompt_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
     command = prompt.factory(
         qa_dataset_loader=lambda: load_dataclass_jsonl(converted_file, QAData),
         un_formatter_loader=lambda: ConceptNetUnFormatter(),
-        llm_loader=lambda: DummyLLM("Dummy"),
+        llm_loader=lambda: llm_class(srcs_cfg.llm, llm_cfg),
         duplicate_template_fn=fn,
     )
 
@@ -235,10 +260,23 @@ if __name__ == "__main__":
     # Prompt commands.
     with coma.forget(init_hook=True):
         coma.register(
-            "prompt.csqa.conceptnet",
+            "prompt.dummy.csqa.conceptnet",
             prompt.placeholder,
             init_hook=prompt_csqa_conceptnet_init_hook,
-            **as_dict(surfacer, csqa),
+            **as_dict(surfacer, csqa, dummy),
         )
+        coma.register(
+            "prompt.openai.csqa.conceptnet",
+            prompt.placeholder,
+            init_hook=prompt_csqa_conceptnet_init_hook,
+            **as_dict(surfacer, csqa, openai),
+        )
+        coma.register(
+            "prompt.transformers.csqa.conceptnet",
+            prompt.placeholder,
+            init_hook=prompt_csqa_conceptnet_init_hook,
+            **as_dict(surfacer, csqa, transformers),
+        )
+
     # Run.
     coma.wake()

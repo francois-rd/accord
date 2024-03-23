@@ -12,13 +12,8 @@ class LLMResult:
 
 
 class LLM:
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+
     def __call__(self, text: str, *args, **kwargs) -> LLMResult:
         raise NotImplementedError
-
-
-class DummyLLM(LLM):
-    def __init__(self, response: str):
-        self.response = response
-
-    def __call__(self, _: str, *args, **kwargs) -> LLMResult:
-        return LLMResult(self.response)
