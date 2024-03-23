@@ -7,6 +7,7 @@ from ..base import Label, QAGroupId
 @dataclass
 class LLMResult:
     generated_text: str
+    prompt_text: Optional[str] = None
     chosen_answer_label: Optional[Label] = None
     qa_group_id: Optional[QAGroupId] = None
 

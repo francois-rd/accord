@@ -141,7 +141,9 @@ def factory(
 
                 # For each answer choice, query the LLM with the QAPrompt.
                 for chosen_answer_label in qa_data.answer_choices:
-                    result = self.llm(self.surfacer(prompt, chosen_answer_label))
+                    text = self.surfacer(prompt, chosen_answer_label)
+                    result = self.llm(text)
+                    result.prompt_text = text
                     result.chosen_answer_label = chosen_answer_label
                     result.qa_group_id = group.identifier
                     results.append(result)
@@ -181,7 +183,9 @@ def factory(
 
                 # For each possible answer choice, query the LLM with the QAPrompt.
                 for chosen_answer_label in qa_data.answer_choices:
-                    result = self.llm(self.surfacer(prompt, chosen_answer_label))
+                    text = self.surfacer(prompt, chosen_answer_label)
+                    result = self.llm(text)
+                    result.prompt_text = text
                     result.chosen_answer_label = chosen_answer_label
                     result.qa_group_id = group.identifier
                     yield result
