@@ -129,9 +129,13 @@ def forest_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
 @coma.hooks.hook
 def group_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
     # Grab the initialized configs.
+    general_cfg: cfgs.GeneralConfig = configs[general.id_]
     srcs_cfg: cfgs.ResourcesConfig = configs[resources.id_]
     dist_cfg: cfgs.MappingDistanceConfig = configs[mapping_distance.id_]
     csqa_cfg: preprocess.csqa.CSQAConfig = configs[csqa.id_]
+
+    # Set the random seed as early as possible.
+    random.seed(general_cfg.random_seed)
 
     # Remove the superfluous configs from the initialization of the command.
     init_hook = coma.hooks.init_hook.positional_factory(mapping_distance.id_, csqa.id_)
