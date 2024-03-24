@@ -149,14 +149,14 @@ class BasicQAGroupTransform:
         i, done = 0, False
         while not done:
             data_ids = {qa_data.correct_answer_label: correct.identifier}
-            data_map = {k: None for k in qa_data.answer_choices}
+            mapping_map = {k: None for k in qa_data.answer_choices}
             for label, others in relevant_others.items():
                 if i >= len(others):
                     done = True
                     break
                 data_ids[label] = others[i].identifier
             if not done:
-                group = QAGroup(f"G{self.group_id_counter}", data_ids, data_map)
+                group = QAGroup(f"G{self.group_id_counter}", data_ids, mapping_map)
                 self.group_id_counter += 1
                 yield group
             i += 1
@@ -177,14 +177,14 @@ class BasicQAGroupTransform:
         # Grab the ith item from each subgroup until one subgroup is exhausted.
         i, done = 0, False
         while not done:
-            data_ids, data_map = {}, {k: None for k in qa_data.answer_choices}
+            data_ids, mapping_map = {}, {k: None for k in qa_data.answer_choices}
             for label, data_list in label_groups.items():
                 if i >= len(data_list):
                     done = True
                     break
                 data_ids[label] = data_list[i].identifier
             if not done:
-                group = QAGroup(f"G{self.group_id_counter}", data_ids, data_map)
+                group = QAGroup(f"G{self.group_id_counter}", data_ids, mapping_map)
                 self.group_id_counter += 1
                 yield group
             i += 1
@@ -225,12 +225,12 @@ class BasicQAGroupTransform:
                 continue
 
             data_ids = {qa_data.correct_answer_label: correct.identifier}
-            data_map = {qa_data.correct_answer_label: None}
+            mapping_map = {qa_data.correct_answer_label: None}
             for (label, term), data in zip(other_choices.items(), batch):
                 data_ids[label] = data.identifier
-                data_map[label] = deepcopy(data.mapping)
-                data_map[label][data.answer_id] = self._format(term)
-            group = QAGroup(f"G{self.group_id_counter}", data_ids, data_map)
+                mapping_map[label] = deepcopy(data.mapping)
+                mapping_map[label][data.answer_id] = self._format(term)
+            group = QAGroup(f"G{self.group_id_counter}", data_ids, mapping_map)
             self.group_id_counter += 1
             yield group
 
@@ -241,12 +241,12 @@ class BasicQAGroupTransform:
     ) -> Iterable[QAGroup]:
         # Replace only the answer term mapping. These trees are otherwise identical.
         for data in group:
-            data_ids, data_map = {}, {}
+            data_ids, mapping_map = {}, {}
             for label, term in qa_data.answer_choices.items():
                 data_ids[label] = data.identifier
-                data_map[label] = deepcopy(data.mapping)
-                data_map[label][data.answer_id] = self._format(term)
-            group = QAGroup(f"G{self.group_id_counter}", data_ids, data_map)
+                mapping_map[label] = deepcopy(data.mapping)
+                mapping_map[label][data.answer_id] = self._format(term)
+            group = QAGroup(f"G{self.group_id_counter}", data_ids, mapping_map)
             self.group_id_counter += 1
             yield group
 
