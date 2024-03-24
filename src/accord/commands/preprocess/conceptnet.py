@@ -60,8 +60,8 @@ def preprocess(
 
     # Keep only relevant languages.
     for language in cfg.languages:
-        df = df.loc[df["source"].str.startswith(f"/c/{language}")]
-        df = df.loc[df["target"].str.startswith(f"/c/{language}")]
+        df = df.loc[df["source"].str.startswith(f"/c/{language}/")]
+        df = df.loc[df["target"].str.startswith(f"/c/{language}/")]
     if general.verbose:
         print(f"Done.", flush=True)
 
