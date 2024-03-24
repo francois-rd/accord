@@ -124,7 +124,7 @@ def sample(resources: ResourcesConfig, general: GeneralConfig, cfg: CSQAConfig):
     pd.DataFrame(df_data).to_csv(ensure_path(sampled_file), sep="\t", index=False)
 
 
-def convert(resources: ResourcesConfig, _: GeneralConfig, cfg: CSQAConfig):
+def convert(resources: ResourcesConfig, general: GeneralConfig, cfg: CSQAConfig):
     """
     Converts the sub-sampled CSQA data from CSV to JSONL format as a generic interface.
     The input CSV format should match the output format of 'sub_sample_csqa()', but with
@@ -172,3 +172,5 @@ def convert(resources: ResourcesConfig, _: GeneralConfig, cfg: CSQAConfig):
         )
         qa_dataset.append(qa_data)
     save_dataclass_jsonl(converted_file, *qa_dataset)
+    if general.verbose:
+        print("Conversion completed.")
