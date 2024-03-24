@@ -49,6 +49,9 @@ class TemplateSequencer:
         *args,
         **kwargs,
     ) -> List[TemplateSequencerResult]:
+        if qa_prompt.tree_map is None:
+            raise ValueError("No trees provided for sequencing.")
+
         # If a specific position is given for the answer, position it appropriately.
         # Otherwise, begin by positioning all trees in answer choice order, then
         # shuffling if needed.

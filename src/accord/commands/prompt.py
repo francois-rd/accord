@@ -62,39 +62,21 @@ def factory(
         def _init_surfacer(self) -> QAPromptSurfacer:
             # Aliases to shorten line lengths.
             qa_surfacer = self.prompt_cfg.qa_data_surfacer
-            seq_surfacer = self.prompt_cfg.template_sequence_surfacer
-            seq = seq_surfacer.sequencer
-            within = seq.shuffle_within_tree_template_order
-            between = seq.shuffle_between_tree_template_order
+
+            # Create TemplateSequenceSurfacer only if trees are given.
+            template_sequence_surfacer = None
+            if self.resources.tree_size > 0:
+                template_sequence_surfacer = self._init_template_sequence_surfacer()
 
             # Create Surfacer.
-            surfacer = QAPromptSurfacer(
+            return QAPromptSurfacer(
                 prefix=self.prompt_cfg.prefix,
                 surfacer_separator=self.prompt_cfg.surfacer_separator,
                 prefix_surfacer=TextSurfacer(
                     prefix=self.prompt_cfg.prefix_surfacer.prefix,
                     text=self.prompt_cfg.prefix_surfacer.text,
                 ),
-                template_sequence_surfacer=TemplateSequenceSurfacer(
-                    prefix=seq_surfacer.prefix,
-                    template_separator=seq_surfacer.template_separator,
-                    sequencer=TemplateSequencer(
-                        chosen_answer_position=seq.chosen_answer_position,
-                        shuffle_tree_order=seq.shuffle_tree_order,
-                        shuffle_within_tree_template_order=within,
-                        shuffle_between_tree_template_order=between,
-                        remove_duplicate_templates=seq.remove_duplicate_templates,
-                        duplicate_template_fn=duplicate_template_fn,
-                    ),
-                    template_surfacer=TemplateSurfacer(
-                        prefix=seq_surfacer.template_surfacer.prefix,
-                        term_surfacer=TermSurfacer(
-                            prefix=seq_surfacer.template_surfacer.term_surfacer.prefix,
-                            suffix=seq_surfacer.template_surfacer.term_surfacer.suffix,
-                            un_formatter=un_formatter_loader(),
-                        ),
-                    ),
-                ),
+                template_sequence_surfacer=template_sequence_surfacer,
                 qa_data_surfacer=QADataSurfacer(
                     prefix=qa_surfacer.prefix,
                     question_answer_separator=qa_surfacer.question_answer_separator,
@@ -106,7 +88,46 @@ def factory(
                     text=self.prompt_cfg.suffix_surfacer.text,
                 ),
             )
-            return surfacer
+
+        def _init_template_sequence_surfacer(self):
+            # Aliases to shorten line lengths.
+            seq_surfacer = self.prompt_cfg.template_sequence_surfacer
+            seq = seq_surfacer.sequencer
+            within = seq.shuffle_within_tree_template_order
+            between = seq.shuffle_between_tree_template_order
+
+            # Create Surfacer.
+            return TemplateSequenceSurfacer(
+                prefix=seq_surfacer.prefix,
+                template_separator=seq_surfacer.template_separator,
+                sequencer=TemplateSequencer(
+                    chosen_answer_position=seq.chosen_answer_position,
+                    shuffle_tree_order=seq.shuffle_tree_order,
+                    shuffle_within_tree_template_order=within,
+                    shuffle_between_tree_template_order=between,
+                    remove_duplicate_templates=seq.remove_duplicate_templates,
+                    duplicate_template_fn=duplicate_template_fn,
+                ),
+                template_surfacer=TemplateSurfacer(
+                    prefix=seq_surfacer.template_surfacer.prefix,
+                    term_surfacer=TermSurfacer(
+                        prefix=seq_surfacer.template_surfacer.term_surfacer.prefix,
+                        suffix=seq_surfacer.template_surfacer.term_surfacer.suffix,
+                        un_formatter=un_formatter_loader(),
+                    ),
+                ),
+            )
+
+        def _run_tree_size_0(self):
+            disable = not self.general.verbose
+            for qa_data in tqdm(qa_dataset_loader(), desc="Progress", disable=disable):
+                with update(self.resources, qa_data) as resources:
+                    prompt = QAPrompt(qa_data, None)
+                    text = self.surfacer(prompt, qa_data.correct_answer_label)
+                    result = self.llm(text)
+                    result.prompt_text = text
+                    result.chosen_answer_label = qa_data.correct_answer_label
+                    save_dataclass_jsonl(resources.llm_results_file, *[result])
 
         def _run_tree_size_1(self):
             disable = not self.general.verbose
@@ -191,7 +212,9 @@ def factory(
                     yield result
 
         def run(self):
-            if self.resources.tree_size == 1:
+            if self.resources.tree_size == 0:
+                self._run_tree_size_0()
+            elif self.resources.tree_size == 1:
                 self._run_tree_size_1()
             else:
                 self._run_other_tree_size()

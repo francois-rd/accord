@@ -71,6 +71,9 @@ class TemplateSurfacer(Surfacer):
         *args,
         **kwargs,
     ) -> str:
+        if qa_prompt.tree_map is None:
+            raise ValueError("No templates provided for surfacing.")
+
         # Grab the sequencer result.
         if "result" not in kwargs:
             raise KeyError("No PromptGroupSequencerResult provided for surfacing.")
@@ -163,17 +166,19 @@ class QAPromptSurfacer(Surfacer):
         self,
         prefix: str,
         surfacer_separator: str,
-        prefix_surfacer: Surfacer,
-        template_sequence_surfacer: Surfacer,
-        qa_data_surfacer: Surfacer,
-        suffix_surfacer: Surfacer,
+        prefix_surfacer: Optional[Surfacer],
+        template_sequence_surfacer: Optional[Surfacer],
+        qa_data_surfacer: Optional[Surfacer],
+        suffix_surfacer: Optional[Surfacer],
     ):
         super().__init__(prefix)
-        self.prefix_surfacer = prefix_surfacer
-        self.template_sequence_surfacer = template_sequence_surfacer
-        self.qa_data_surfacer = qa_data_surfacer
-        self.suffix_surfacer = suffix_surfacer
         self.surfacer_separator = surfacer_separator
+        self.surfacers = [
+            prefix_surfacer,
+            template_sequence_surfacer,
+            qa_data_surfacer,
+            suffix_surfacer,
+        ]
 
     def __call__(
         self,
@@ -186,10 +191,5 @@ class QAPromptSurfacer(Surfacer):
             return fn(qa_prompt, chosen_answer_label, *args, **kwargs)
 
         return self.prefix + self.surfacer_separator.join(
-            [
-                fn_caller(self.prefix_surfacer),
-                fn_caller(self.template_sequence_surfacer),
-                fn_caller(self.qa_data_surfacer),
-                fn_caller(self.suffix_surfacer),
-            ]
+            [fn_caller(f) for f in self.surfacers if f is not None],
         )
