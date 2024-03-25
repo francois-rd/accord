@@ -1,15 +1,32 @@
 from typing import Callable, List, Optional
+import json
 
 from tqdm import tqdm
 
-from ..configs import BeamSearchConfig, GeneralConfig, ResourcesConfig, update
 from ...base import QAData
 from ...components import TermFormatter
-from ...io import load_forest_jsonl, load_relations_csv, save_dataclass_jsonl
 from ...transforms import BasicQAGroupTransform, MappingDistanceFunc
+from ...io import (
+    load_forest_jsonl,
+    load_reducer_csv,
+    load_relations_csv,
+    save_dataclass_jsonl,
+)
+from ..configs import (
+    BeamSearchConfig,
+    GeneralConfig,
+    ReducerConfig,
+    ResourcesConfig,
+    update,
+)
 
 
-def placeholder(_: ResourcesConfig, __: GeneralConfig, ___: BeamSearchConfig):
+def placeholder(
+    _: ResourcesConfig,
+    __: GeneralConfig,
+    ___: BeamSearchConfig,
+    ____: ReducerConfig,
+):
     pass
 
 
@@ -25,18 +42,32 @@ def factory(
             resources: ResourcesConfig,
             general: GeneralConfig,
             beam_search_cfg: BeamSearchConfig,
+            reducer_cfg: ReducerConfig,
         ):
             self.resources = resources
             self.general = general
             self.beam_search_cfg = beam_search_cfg
+            self.reducer_cfg = reducer_cfg
 
         def run(self):
+            # Load the reducer.
+            if self.reducer_cfg.ignore:
+                reducer = None
+            else:
+                reducer = load_reducer_csv(
+                    file_path=self.resources.reductions_file,
+                    relations=load_relations_csv(self.resources.relations_file),
+                    raise_=self.reducer_cfg.raise_on_dup,
+                )
+
             transform = BasicQAGroupTransform(
                 protocol=self.beam_search_cfg.protocol,
                 formatter=formatter_loader(),
                 language=language,
                 relations=load_relations_csv(self.resources.relations_file),
                 mapping_distance_fn=mapping_distance_fn,
+                reducer=reducer,
+                verbose=self.general.verbose,
             )
 
             disable = not self.general.verbose
@@ -48,5 +79,7 @@ def factory(
                     )
                     groups = [g for f in forest.families for g in transform(qa_data, f)]
                     save_dataclass_jsonl(resources.group_file, *groups)
+            if self.general.verbose:
+                print(f"Summary stats:\n{json.dumps(transform.get_stats(), indent=4)}")
 
     return Generator

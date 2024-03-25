@@ -258,7 +258,7 @@ if __name__ == "__main__":
             "generate.group.csqa.conceptnet",
             generate.group.placeholder,
             init_hook=group_csqa_conceptnet_init_hook,
-            **as_dict(beam_search, mapping_distance, csqa),
+            **as_dict(beam_search, reducer, mapping_distance, csqa),
         )
 
     # Prompt commands.
