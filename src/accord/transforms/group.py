@@ -267,7 +267,6 @@ class BasicQAGroupTransform:
         return self.stats
 
     def _collect_stats(self, group: QAGroup, family: InstantiationFamily):
-        self.stats = {"groups": 0, "factual": {}, "anti_factual": {}, "mixed": {}}
         self.stats["groups"] += 1
         arbitrary_data_id = next(group.data_ids.values().__iter__())
         data = family.data_map[arbitrary_data_id]
