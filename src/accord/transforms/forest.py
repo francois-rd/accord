@@ -2,7 +2,6 @@ from typing import Dict, List, Iterable, Optional, Tuple
 from itertools import combinations
 from dataclasses import replace
 from copy import deepcopy
-import json
 
 from ..base import (
     InstantiationData,
@@ -20,6 +19,8 @@ from ..components import (
     GeneratorFilter,
     Reducer,
     TermFormatter,
+    af_vars_factory,
+    n_hop_factory,
 )
 
 
@@ -43,8 +44,8 @@ class ForestTransform:
         self.pairing_filter = pairing_filter
         self.anti_factual_filter = anti_factual_filter
         self.verbose = verbose
-        self.non_default_answer = None
         self.data_id_counter = 0
+        self.stats = None
 
     def __call__(
         self,
@@ -55,61 +56,29 @@ class ForestTransform:
         Given a sequence of (relationally-transformed) ReasoningTrees and some QAData,
         apply a sequence of Transforms to each tree, returning a ReasoningForest.
         """
-        stats = {
-            "trees": 0,
-            "pairings": {
-                "total": 0,
-                "non_default": 0,
-            },
-            "instantiation_attempts": {
-                "factual": 0,
-                "anti_factual": 0,
-                "mixed": 0,
-            },
-            "instantiations": {
-                "total": {
-                    "factual": 0,
-                    "anti_factual": 0,
-                    "mixed": 0,
-                },
-                "non_default": {
-                    "factual": 0,
-                    "anti_factual": 0,
-                    "mixed": 0,
-                },
-            },
-        }
         forest = InstantiationForest()
         for tree in trees:
-            stats["trees"] += 1
+            if self.stats is None:
+                self._init_stats(tree)
+            self.stats["trees"] += 1
             family = None  # This avoids adding families with no valid instantiations.
             for pairing_data in self.pairing_filter(self._all_pairings(tree, qa_data)):
-                stats["pairings"]["total"] += 1
-                if self.non_default_answer:
-                    stats["pairings"]["non_default"] += 1
+                hops = pairing_data.reasoning_hops
+                self.stats["pairings"][hops] += 1
                 for anti_factual_ids in self.anti_factual_filter(
                     self._all_anti_factual_ids(tree, pairing_data)
                 ):
-                    if len(anti_factual_ids) == 0:
-                        which = "factual"
-                    elif len(anti_factual_ids) == len(tree.unique_variable_ids()) - 2:
-                        which = "anti_factual"
-                    else:
-                        which = "mixed"
-                    stats["instantiation_attempts"][which] += 1
+                    af_vars = len(anti_factual_ids)
+                    self.stats["instantiation_attempts"][af_vars][hops] += 1
                     for full_data in self._instantiate_variables(
                         tree, pairing_data, anti_factual_ids, qa_data
                     ):
-                        stats["instantiations"]["total"][which] += 1
-                        if self.non_default_answer:
-                            stats["instantiations"]["non_default"][which] += 1
+                        self.stats["instantiations"][af_vars][hops] += 1
                         if family is None:
                             # Delay creating a new family until at least one valid hit.
                             family = forest.add_family(tree)
                         family.add(full_data.identifier)
                         forest.add_data(full_data)
-        if self.verbose:
-            print(f"Summary statistics:\n{json.dumps(stats, indent=4)}")
         return forest
 
     def _all_pairings(
@@ -120,20 +89,19 @@ class ForestTransform:
         for template in tree.templates:
             for pairing, qa_template in self._find_pairings(template, qa_data):
                 if self.reducer is None:
-                    answers = tree.unique_variable_ids() - {pairing[0]}
+                    answer_ids = tree.unique_variable_ids() - {pairing[0]}
+                    ids_and_hops = [(answer_id, -1) for answer_id in answer_ids]
                 else:
-                    answers = self.reducer.valid_answer_ids(tree, template, pairing[0])
-                if pairing[0] == template.source_id:
-                    default_answer = template.target_id
-                else:
-                    default_answer = template.source_id
-                for answer in answers:
-                    self.non_default_answer = answer != default_answer
+                    ids_and_hops = self.reducer.valid_answer_ids(
+                        tree, template, pairing[0], return_reasoning_hops=True,
+                    )
+                for answer_id, reasoning_hops in ids_and_hops:
                     yield InstantiationData(
                         pairing_template=deepcopy(template),
                         pairing=pairing,
                         qa_template=qa_template,
-                        answer_id=answer,
+                        answer_id=answer_id,
+                        reasoning_hops=reasoning_hops,
                     )
 
     @staticmethod
@@ -218,3 +186,14 @@ class ForestTransform:
             )
             self.data_id_counter += 1
             yield new_data
+
+    def get_stats(self):
+        return self.stats
+
+    def _init_stats(self, tree: RelationalTree):
+        self.stats = {
+            "trees": 0,
+            "pairings": n_hop_factory(tree),
+            "instantiation_attempts": af_vars_factory(tree),
+            "instantiations": af_vars_factory(tree),
+        }

@@ -105,23 +105,23 @@ class Reducer:
         tree: RelationalTree,
         pairing_template: RelationalTemplate,
         pairing_id: VarId,
-        return_counts: bool = False,
+        return_reasoning_hops: bool = False,
     ) -> List[Union[VarId, Tuple[VarId, int]]]:
-        r = self._answer_ids_and_counts(tree.templates, pairing_template, pairing_id, 0)
-        return [id_count if return_counts else id_count[0] for id_count in r]
+        r = self._answer_ids_and_hops(tree.templates, pairing_template, pairing_id, 0)
+        return [id_count if return_reasoning_hops else id_count[0] for id_count in r]
 
-    def _answer_ids_and_counts(
+    def _answer_ids_and_hops(
         self,
         templates: List[RelationalTemplate],
         pairing_template: RelationalTemplate,
         pairing_id: VarId,
-        count: int,
+        hops: int,
     ) -> Iterable[Tuple[VarId, int]]:
         if pairing_template in templates:
             if pairing_id == pairing_template.source_id:
-                yield pairing_template.target_id, count
+                yield pairing_template.target_id, hops
             elif pairing_id == pairing_template.target_id:
-                yield pairing_template.source_id, count
+                yield pairing_template.source_id, hops
             else:
                 raise ValueError("Pairing variable not in pairing template.")
         for template in templates:
@@ -131,8 +131,8 @@ class Reducer:
                     to_remove = [template, pairing_template]
                     to_keep = [t for t in templates if t not in to_remove]
                     to_keep.append(new_template)
-                    yield from self._answer_ids_and_counts(
-                        to_keep, new_template, pairing_id, count + 1
+                    yield from self._answer_ids_and_hops(
+                        to_keep, new_template, pairing_id, hops + 1,
                     )
 
     @staticmethod

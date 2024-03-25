@@ -2,7 +2,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Tuple
 from copy import deepcopy
 import random
 
-from ..components import BeamSearchProtocol, Reducer, TermFormatter
+from ..components import BeamSearchProtocol, TermFormatter, af_vars_factory
 from ..base import (
     InstantiationData,
     InstantiationFamily,
@@ -48,7 +48,6 @@ class BasicQAGroupTransform:
         language: str,
         relations: Iterable[Relation],
         mapping_distance_fn: Optional[MappingDistanceFunc],
-        reducer: Optional[Reducer],
         verbose: bool = False,
     ):
         self.protocol = protocol
@@ -56,10 +55,9 @@ class BasicQAGroupTransform:
         self.language = language
         self.relation_map = {r.type_: r for r in relations}
         self.mapping_distance_fn = mapping_distance_fn
-        self.reducer = reducer
         self.verbose = verbose
         self.group_id_counter = 0
-        self.stats = {"groups": 0, "factual": {}, "anti_factual": {}, "mixed": {}}
+        self.stats = None
 
     def __call__(
         self,
@@ -68,6 +66,9 @@ class BasicQAGroupTransform:
         *args,
         **kwargs,
     ) -> Iterable[QAGroup]:
+        if self.stats is None:
+            self.stats = af_vars_factory(family.tree)
+            print(self.stats)
         if self.protocol == BeamSearchProtocol.AF_IN_LINE:
             for group in self._group_by_all_but_mapping(family).values():
                 if self.mapping_distance_fn is None:
@@ -267,39 +268,6 @@ class BasicQAGroupTransform:
         return self.stats
 
     def _collect_stats(self, group: QAGroup, family: InstantiationFamily):
-        self.stats["groups"] += 1
         arbitrary_data_id = next(group.data_ids.values().__iter__())
         data = family.data_map[arbitrary_data_id]
-        if len(data.anti_factual_ids) == 0:
-            which = "factual"
-        elif len(data.anti_factual_ids) == len(family.tree.unique_variable_ids()) - 2:
-            which = "anti_factual"
-        else:
-            which = "mixed"
-        n_hops = self._n_hops(family, data)
-        self.stats[which].setdefault(n_hops, 0)
-        self.stats[which][n_hops] += 1
-
-    def _n_hops(self, family: InstantiationFamily, data: InstantiationData) -> int:
-        if self.reducer is None:
-            return -1  # Cannot accurately verify number of hops without reducer.
-
-        ids_and_counts = self.reducer.valid_answer_ids(
-            family.tree, data.pairing_template, data.pairing[0], return_counts=True,
-        )
-
-        if self.verbose:
-            answer_ids = [id_ for id_, _ in ids_and_counts]
-            if len(set(answer_ids)) != len(answer_ids):
-                print(f"WARNING: Repeat answer ids: {answer_ids}")
-
-        counts = [count for id_, count in ids_and_counts if id_ == data.answer_id]
-        if len(counts) == 0:
-            print("WARNING: No answer id was found to match instantiation data.")
-            return -1
-        elif len(counts) == 1:
-            return counts[0]
-        else:
-            if self.verbose:
-                print(f"WARNING: Repeat answer id {data.answer_id} affecting mapping.")
-            return min(counts)
+        self.stats[len(data.anti_factual_ids)][data.reasoning_hops] += 1

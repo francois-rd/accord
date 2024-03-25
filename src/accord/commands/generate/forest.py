@@ -1,4 +1,5 @@
 from typing import Callable, List
+import json
 
 from tqdm import tqdm
 
@@ -108,5 +109,7 @@ def factory(
                         data_file_path=resources.forest_data_file,
                         forest=transform(trees, qa_data),
                     )
+            if self.general.verbose:
+                print(f"Summary stats:\n{json.dumps(transform.get_stats(), indent=4)}")
 
     return Generator

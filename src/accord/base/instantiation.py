@@ -24,6 +24,8 @@ class InstantiationData:
         pair with pairing_template.
     answer_id: The identifier of the Variable in the RelationalTree's templates to
         instantiate using a specific QAData's answer_choices.
+    reasoning_hops: The number of reasoning hops between the pairing variable and the
+        answer variable; or -1 if unknown
     anti_factual_ids: The identifiers of all Variables in the RelationalTree's
         templates to instantiate anti-factually, rather than factually. Can be empty.
     mapping: A mapping between all Variable identifiers and their respective
@@ -35,6 +37,7 @@ class InstantiationData:
     pairing: Optional[Tuple[VarId, Term]] = None
     qa_template: Optional[Template] = None
     answer_id: Optional[VarId] = None
+    reasoning_hops: int = -1
     anti_factual_ids: Optional[List[VarId]] = None
     mapping: Optional[InstantiationMap] = None
 
