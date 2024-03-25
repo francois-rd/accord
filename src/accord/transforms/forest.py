@@ -2,6 +2,7 @@ from typing import Dict, List, Iterable, Optional, Tuple
 from itertools import combinations
 from dataclasses import replace
 from copy import deepcopy
+import json
 
 from ..base import (
     InstantiationData,
@@ -54,38 +55,61 @@ class ForestTransform:
         Given a sequence of (relationally-transformed) ReasoningTrees and some QAData,
         apply a sequence of Transforms to each tree, returning a ReasoningForest.
         """
+        stats = {
+            "trees": 0,
+            "pairings": {
+                "total": 0,
+                "non_default": 0,
+            },
+            "instantiation_attempts": {
+                "factual": 0,
+                "anti_factual": 0,
+                "mixed": 0,
+            },
+            "instantiations": {
+                "total": {
+                    "factual": 0,
+                    "anti_factual": 0,
+                    "mixed": 0,
+                },
+                "non_default": {
+                    "factual": 0,
+                    "anti_factual": 0,
+                    "mixed": 0,
+                },
+            },
+        }
         forest = InstantiationForest()
-        total_non_default_answer, total_non_default_inst, total_instantiations = 0, 0, 0
         for tree in trees:
+            stats["trees"] += 1
             family = None  # This avoids adding families with no valid instantiations.
             for pairing_data in self.pairing_filter(self._all_pairings(tree, qa_data)):
+                stats["pairings"]["total"] += 1
                 if self.non_default_answer:
-                    total_non_default_answer += 1
+                    stats["pairings"]["non_default"] += 1
                 for anti_factual_ids in self.anti_factual_filter(
                     self._all_anti_factual_ids(tree, pairing_data)
                 ):
+                    if len(anti_factual_ids) == 0:
+                        which = "factual"
+                    elif len(anti_factual_ids) == len(tree.unique_variable_ids()) - 2:
+                        which = "anti_factual"
+                    else:
+                        which = "mixed"
+                    stats["instantiation_attempts"][which] += 1
                     for full_data in self._instantiate_variables(
                         tree, pairing_data, anti_factual_ids, qa_data
                     ):
-                        total_instantiations += 1
+                        stats["instantiations"]["total"][which] += 1
                         if self.non_default_answer:
-                            total_non_default_inst += 1
+                            stats["instantiations"]["non_default"][which] += 1
                         if family is None:
                             # Delay creating a new family until at least one valid hit.
                             family = forest.add_family(tree)
                         family.add(full_data.identifier)
                         forest.add_data(full_data)
         if self.verbose:
-            print(
-                "Total number of pairings with non-default answer variable choice:",
-                total_non_default_answer
-            )
-            print(
-                "Total number of instantiations with "
-                "non-default answer variable choice:",
-                total_non_default_inst
-            )
-            print("Total number of instantiations:", total_instantiations)
+            print(f"Summary statistics:\n{json.dumps(stats, indent=4)}")
         return forest
 
     def _all_pairings(
