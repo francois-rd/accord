@@ -168,9 +168,9 @@ class ForestTransform:
         Variables at all, and there *must* be at least two untouched Variables (to treat
         as the answer choice and pairing Variables).
         """
-        af_variables = tree.unique_variable_ids() - {data.pairing[0], data.answer_id}
-        for k in range(len(af_variables) + 1):
-            for combination in combinations(af_variables, k):
+        options = sorted(tree.unique_variable_ids() - {data.pairing[0], data.answer_id})
+        for k in range(len(options) + 1):
+            for combination in combinations(options, k):
                 yield list(combination)
 
     def _instantiate_variables(
