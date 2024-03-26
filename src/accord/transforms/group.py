@@ -68,7 +68,6 @@ class BasicQAGroupTransform:
     ) -> Iterable[QAGroup]:
         if self.stats is None:
             self.stats = af_vars_factory(family.tree)
-            print(self.stats)
         if self.protocol == BeamSearchProtocol.AF_IN_LINE:
             for group in self._group_by_all_but_mapping(family).values():
                 if self.mapping_distance_fn is None:
