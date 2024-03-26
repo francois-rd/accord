@@ -108,6 +108,7 @@ class Reducer:
         return_reasoning_hops: bool = False,
     ) -> List[Union[VarId, Tuple[VarId, int]]]:
         r = self._answer_ids_and_hops(tree.templates, pairing_template, pairing_id, 1)
+        r = sorted(r, key=lambda x: x[0])
         return [id_count if return_reasoning_hops else id_count[0] for id_count in r]
 
     def _answer_ids_and_hops(

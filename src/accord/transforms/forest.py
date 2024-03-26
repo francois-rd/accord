@@ -89,7 +89,7 @@ class ForestTransform:
         for template in tree.templates:
             for pairing, qa_template in self._find_pairings(template, qa_data):
                 if self.reducer is None:
-                    answer_ids = tree.unique_variable_ids() - {pairing[0]}
+                    answer_ids = sorted(tree.unique_variable_ids() - {pairing[0]})
                     ids_and_hops = [(answer_id, -1) for answer_id in answer_ids]
                 else:
                     ids_and_hops = self.reducer.valid_answer_ids(
