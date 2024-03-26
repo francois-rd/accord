@@ -29,7 +29,7 @@ class Generate:
         self.reducer_cfg = reducer_cfg
         seed = general.random_seed
         self.filters = {
-            k: GeneratorFilter(prob, seed) for k, prob in filter_cfg.relational_probs
+            k: GeneratorFilter(p, seed) for k, p in filter_cfg.relational_probs.items()
         }
 
     def run(self):
