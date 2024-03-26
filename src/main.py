@@ -249,7 +249,11 @@ if __name__ == "__main__":
 
     # Generation commands.
     coma.register("generate.generic", generate.generic.generate, **as_dict(filt))
-    coma.register("generate.relational", generate.relational.Generate, **as_dict(filt))
+    coma.register(
+        "generate.relational",
+        generate.relational.Generate,
+        **as_dict(reducer, filt),
+    )
     with coma.forget(init_hook=True):
         coma.register(
             "generate.forest.csqa.conceptnet",

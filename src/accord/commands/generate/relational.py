@@ -2,11 +2,16 @@ from typing import List, Iterable
 from itertools import product
 import networkx as nx
 
-from ..configs import FilterConfig, GeneralConfig, ResourcesConfig
+from ..configs import FilterConfig, GeneralConfig, ReducerConfig, ResourcesConfig
 from ...base import GenericTree, RelationalTree
 from ...components import GeneratorFilter
 from ...transforms import RelationalTransform
-from ...io import save_dataclass_jsonl, load_dataclass_jsonl, load_relations_csv
+from ...io import (
+    load_dataclass_jsonl,
+    load_reducer_csv,
+    load_relations_csv,
+    save_dataclass_jsonl,
+)
 
 
 class Generate:
@@ -14,22 +19,38 @@ class Generate:
         self,
         resources: ResourcesConfig,
         general: GeneralConfig,
+        reducer_cfg: ReducerConfig,
         filter_cfg: FilterConfig,
     ):
         self.trees = load_dataclass_jsonl(resources.generic_trees_file, GenericTree)
         self.relations = load_relations_csv(resources.relations_file)
-        self.g_filter = GeneratorFilter(filter_cfg.relational_prob, general.random_seed)
         self.resources = resources
         self.general = general
+        self.reducer_cfg = reducer_cfg
+        seed = general.random_seed
+        self.filters = {
+            k: GeneratorFilter(prob, seed) for k, prob in filter_cfg.relational_probs
+        }
 
     def run(self):
         save_dataclass_jsonl(self.resources.relational_trees_file, *self._transform())
 
     def _transform(self) -> List[RelationalTree]:
         """Transform all trees."""
+        # Load the reducer.
+        if self.reducer_cfg.ignore:
+            reducer = None
+        else:
+            reducer = load_reducer_csv(
+                file_path=self.resources.reductions_file,
+                relations=load_relations_csv(self.resources.relations_file),
+                raise_=self.reducer_cfg.raise_on_dup,
+            )
+
+        # Transform all trees.
         tree_groups, tree_size = {}, self.resources.tree_size
-        for n_relations in self.g_filter(product(self.relations, repeat=tree_size)):
-            transform = RelationalTransform(n_relations)
+        for n_relations in product(self.relations, repeat=tree_size):
+            transform = RelationalTransform(n_relations, reducer, self.filters)
             group_key = tuple(sorted(set([r.type_ for r in n_relations])))
             for tree in self.trees:
                 new_tree = transform(tree)

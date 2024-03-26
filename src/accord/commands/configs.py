@@ -77,7 +77,7 @@ def update(resources: ResourcesConfig, qa_data: QAData):
 @dataclass
 class FilterConfig:
     generic_prob: float = 0.0
-    relational_prob: float = 0.0
+    relational_probs: dict = field(default_factory=dict)
     pairing_prob: float = 0.0
     anti_factual_prob: float = 0.0
     prompt_probs: dict = field(default_factory=dict)
