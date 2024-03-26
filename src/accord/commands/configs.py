@@ -80,6 +80,7 @@ class FilterConfig:
     relational_prob: float = 0.0
     pairing_prob: float = 0.0
     anti_factual_prob: float = 0.0
+    prompt_probs: dict = field(default_factory=dict)
 
 
 @dataclass

@@ -3,7 +3,13 @@ from copy import deepcopy
 
 from tqdm import tqdm
 
-from .configs import GeneralConfig, QAPromptSurfacerConfig, ResourcesConfig, update
+from .configs import (
+    FilterConfig,
+    GeneralConfig,
+    QAPromptSurfacerConfig,
+    ResourcesConfig,
+    update,
+)
 from ..base import (
     InstantiationData,
     InstantiationForest,
@@ -16,6 +22,7 @@ from ..base import (
 )
 from ..components import (
     DuplicateTemplateFunc,
+    GeneratorFilter,
     LLM,
     LLMResult,
     QADataSurfacer,
@@ -35,7 +42,12 @@ from ..io import (
 )
 
 
-def placeholder(_: ResourcesConfig, __: GeneralConfig, ___: QAPromptSurfacerConfig):
+def placeholder(
+    _: ResourcesConfig,
+    __: GeneralConfig,
+    ___: FilterConfig,
+    ____: QAPromptSurfacerConfig,
+):
     pass
 
 
@@ -50,10 +62,12 @@ def factory(
             self,
             resources: ResourcesConfig,
             general: GeneralConfig,
+            filter_cfg: FilterConfig,
             prompt_cfg: QAPromptSurfacerConfig,
         ):
             self.resources = resources
             self.general = general
+            self.filter_cfg = filter_cfg
             self.prompt_cfg = prompt_cfg
             self.surfacer = self._init_surfacer()
             self.llm = llm_loader()
@@ -193,13 +207,20 @@ def factory(
         ) -> Iterable[LLMResult]:
             # For each QAGroup, create an associated QAPrompt.
             for group in groups:
-                tree_map = {}
+                fam, af_vars, hops, tree_map = None, None, None, {}
                 group.instantiate(forest)
                 for label, data in group.data_map.items():
-                    for f in forest.families:
-                        if data.identifier in f.data_ids:
-                            tree_map[label] = data.instantiate(f.tree, relation_map)
-                            break
+                    if fam is None:
+                        for family in forest.families:
+                            if data.identifier in family.data_ids:
+                                fam = family
+                                af_vars = str(len(data.anti_factual_ids))
+                                hops = str(data.reasoning_hops)
+                                break
+                    tree_map[label] = data.instantiate(fam.tree, relation_map)
+                prob = self.filter_cfg.prompt_probs.get(af_vars, {}).get(hops, 0.0)
+                if not GeneratorFilter(prob).passes():
+                    continue
                 prompt = QAPrompt(qa_data, tree_map)
 
                 # For each possible answer choice, query the LLM with the QAPrompt.

@@ -178,9 +178,13 @@ def prompt_csqa_conceptnet_init_hook(name: str, configs: Dict[str, Any]) -> Any:
         raise ValueError(f"Unsupported prompt command: {name}")
 
     # Grab the initialized configs.
+    general_cfg: cfgs.GeneralConfig = configs[general.id_]
     srcs_cfg: cfgs.ResourcesConfig = configs[resources.id_]
     csqa_cfg: preprocess.csqa.CSQAConfig = configs[csqa.id_]
     llm_cfg = configs[llm_cfg_id]
+
+    # Set the random seed as early as possible.
+    random.seed(general_cfg.random_seed)
 
     # Remove the superfluous configs from the initialization of the command.
     init_hook = coma.hooks.init_hook.positional_factory(csqa.id_, llm_cfg_id)
@@ -267,19 +271,19 @@ if __name__ == "__main__":
             "prompt.dummy.csqa.conceptnet",
             prompt.placeholder,
             init_hook=prompt_csqa_conceptnet_init_hook,
-            **as_dict(surfacer, csqa, dummy),
+            **as_dict(filt, surfacer, csqa, dummy),
         )
         coma.register(
             "prompt.openai.csqa.conceptnet",
             prompt.placeholder,
             init_hook=prompt_csqa_conceptnet_init_hook,
-            **as_dict(surfacer, csqa, openai),
+            **as_dict(filt, surfacer, csqa, openai),
         )
         coma.register(
             "prompt.transformers.csqa.conceptnet",
             prompt.placeholder,
             init_hook=prompt_csqa_conceptnet_init_hook,
-            **as_dict(surfacer, csqa, transformers),
+            **as_dict(filt, surfacer, csqa, transformers),
         )
 
     # Run.

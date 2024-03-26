@@ -14,5 +14,8 @@ class GeneratorFilter:
 
     def __call__(self, generator: Iterable[T]) -> Iterable[T]:
         for x in generator:
-            if random.random() >= self.prob:
+            if self.passes():
                 yield x
+
+    def passes(self) -> bool:
+        return random.random() >= self.prob
