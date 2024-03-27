@@ -48,6 +48,7 @@ class TransformersLLM(LLM):
         import torch
         from transformers import (
             AutoModelForCausalLM,
+            AutoTokenizer,
             BitsAndBytesConfig,
             pipeline,
             set_seed,
@@ -76,6 +77,7 @@ class TransformersLLM(LLM):
         self.llm = pipeline(
             task="text-generation",
             model=AutoModelForCausalLM.from_pretrained(self.model_name, **model_params),
+            tokenizer=AutoTokenizer.from_pretrained(self.model_name),
             torch_dtype=torch.bfloat16,
             **self.cfg.pipeline_params,
         )
