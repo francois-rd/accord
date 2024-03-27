@@ -1,10 +1,11 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import os
 
 from retry import retry
 
-from ..components import LLM, LLMResult
+from ..base import QAData
+from ..components import LLM, LLMResult, LLMOutputParser
 
 
 @dataclass
@@ -23,15 +24,20 @@ class OpenAIConfig:
 
 
 class OpenAILLM(LLM):
-    def __init__(self, model_name: str, cfg: OpenAIConfig):
+    def __init__(
+        self,
+        model_name: str,
+        cfg: OpenAIConfig,
+        parser: Optional[LLMOutputParser] = None,
+    ):
         from openai import OpenAI  # Delayed import.
 
-        super().__init__(model_name)
+        super().__init__(model_name, parser)
         self.cfg = cfg
         self.llm = OpenAI(api_key=os.environ["OPENAI_API_KEY"]).chat.completions.create
 
     @retry(tries=2, delay=1)
-    def __call__(self, text: str, *args, **kwargs) -> LLMResult:
+    def __call__(self, text: str, qa_data: QAData, *args, **kwargs) -> LLMResult:
         response = self.llm(
             model=self.model_name,
             messages=[
@@ -40,4 +46,5 @@ class OpenAILLM(LLM):
             ],
             **self.cfg.query_params,
         )
-        return LLMResult(response.choices[0].message.content)
+        generated_text = response.choices[0].message.content
+        return LLMResult(generated_text, self.parser(generated_text, qa_data))

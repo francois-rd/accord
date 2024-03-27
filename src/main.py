@@ -6,7 +6,7 @@ import os
 import coma
 
 from accord.base import QAData
-from accord.commands import preprocess, generate, prompt, configs as cfgs
+from accord.commands import preprocess, generate, prompt, analyze, configs as cfgs
 from accord.io import load_dataclass_jsonl
 from accord.transforms import mapping_distance_factory
 from accord.components import (
@@ -32,6 +32,7 @@ from accord.llms import (
 
 
 ConfigData = namedtuple("ConfigData", "id_ type_")
+basic_analysis = ConfigData("basic_analysis", analyze.basic.BasicAnalysisConfig)
 beam_search = ConfigData("beam_search", cfgs.BeamSearchConfig)
 conceptnet = ConfigData("conceptnet", preprocess.conceptnet.ConceptNetConfig)
 csqa = ConfigData("csqa", preprocess.csqa.CSQAConfig)
@@ -206,6 +207,25 @@ def prompt_csqa_conceptnet_init_hook(name: str, configs: Dict[str, Any]) -> Any:
 
 
 @coma.hooks.hook
+def analyze_basic_csqa_conceptnet_init_hook(configs: Dict[str, Any]) -> Any:
+    # Grab the initialized configs.
+    srcs_cfg: cfgs.ResourcesConfig = configs[resources.id_]
+    csqa_cfg: preprocess.csqa.CSQAConfig = configs[csqa.id_]
+
+    # Remove the superfluous configs from the initialization of the command.
+    init_hook = coma.hooks.init_hook.positional_factory(csqa.id_)
+
+    # Use the factory to create an appropriate command.
+    converted_file = os.path.join(srcs_cfg.qa_dataset_dir, csqa_cfg.converted_data_file)
+    command = analyze.basic.factory(
+        qa_dataset_loader=lambda: load_dataclass_jsonl(converted_file, QAData),
+    )
+
+    # Initialize the command.
+    return init_hook(command=command, configs=configs)
+
+
+@coma.hooks.hook
 def pre_run_hook(known_args):
     if known_args.dry_run:
         print("Dry run.")
@@ -288,6 +308,15 @@ if __name__ == "__main__":
             prompt.placeholder,
             init_hook=prompt_csqa_conceptnet_init_hook,
             **as_dict(filt, surfacer, csqa, transformers),
+        )
+
+    # Analysis commands.
+    with coma.forget(init_hook=True):
+        coma.register(
+            "analyze.basic.csqa.conceptnet",
+            analyze.basic.placeholder,
+            init_hook=analyze_basic_csqa_conceptnet_init_hook,
+            **as_dict(basic_analysis, csqa),
         )
 
     # Run.

@@ -54,9 +54,13 @@ class ResourcesConfig:
     group_dir: str = "${qa_data_dir}/groups"
     group_file: str = "${group_dir}/groups.jsonl"
 
-    # InstantiationForest directory and data.
+    # LLMResult directory and data.
     llm_results_dir: str = "${qa_data_dir}/llm_results/${llm}"
     llm_results_file: str = "${llm_results_dir}/llm_results.jsonl"
+
+    # Analysis results directory and data.
+    analysis_dir: str = "${result_dir}/analysis"
+    analysis_file: str = "${analysis_dir}/analysis.jsonl"
 
     # Size of tree (number of ReasoningTemplates).
     tree_size: int = 2
@@ -66,12 +70,29 @@ class ResourcesConfig:
 
 
 @contextmanager
-def update(resources: ResourcesConfig, qa_data: QAData):
+def update(
+    resources: ResourcesConfig,
+    qa_data: QAData,
+    tree_size: Optional[int] = None,
+    llm: Optional[str] = None,
+):
     resources.qa_temp_dir = qa_data.identifier
+    old_tree_size = None
+    if tree_size is not None:
+        old_tree_size = resources.tree_size
+        resources.tree_size = tree_size
+    old_llm = None
+    if llm is not None:
+        old_llm = resources.llm
+        resources.llm = llm
     try:
         yield resources
     finally:
         resources.qa_temp_dir = None
+        if tree_size is not None:
+            resources.tree_size = old_tree_size
+        if llm is not None:
+            resources.llm = old_llm
 
 
 @dataclass

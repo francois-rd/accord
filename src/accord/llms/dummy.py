@@ -1,6 +1,8 @@
 from dataclasses import dataclass
+from typing import Optional
 
-from ..components import LLM, LLMResult
+from ..base import QAData
+from ..components import LLM, LLMResult, LLMOutputParser
 
 
 @dataclass
@@ -9,9 +11,14 @@ class DummyConfig:
 
 
 class DummyLLM(LLM):
-    def __init__(self, model_name: str, cfg: DummyConfig):
-        super().__init__(model_name)
+    def __init__(
+        self,
+        model_name: str,
+        cfg: DummyConfig,
+        parser: Optional[LLMOutputParser] = None,
+    ):
+        super().__init__(model_name, parser)
         self.response = cfg.response
 
-    def __call__(self, _: str, *args, **kwargs) -> LLMResult:
-        return LLMResult(self.response)
+    def __call__(self, _: str, qa_data: QAData, *args, **kwargs) -> LLMResult:
+        return LLMResult(self.response, self.parser(self.response, qa_data))

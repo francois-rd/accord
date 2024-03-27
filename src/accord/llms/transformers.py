@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-from ..components import LLM, LLMResult
+from ..base import QAData
+from ..components import LLM, LLMResult, LLMOutputParser
 
 
 @dataclass
@@ -37,7 +38,12 @@ class TransformersConfig:
 
 
 class TransformersLLM(LLM):
-    def __init__(self, model_name: str, cfg: TransformersConfig):
+    def __init__(
+        self,
+        model_name: str,
+        cfg: TransformersConfig,
+        parser: Optional[LLMOutputParser] = None,
+    ):
         # Delayed imports.
         import torch
         from transformers import (
@@ -49,7 +55,7 @@ class TransformersLLM(LLM):
 
         # Basic initialization.
         set_seed(cfg.seed)
-        super().__init__(model_name)
+        super().__init__(model_name, parser)
         self.cfg = cfg
 
         # Quantization.
@@ -74,7 +80,7 @@ class TransformersLLM(LLM):
             **self.cfg.pipeline_params,
         )
 
-    def __call__(self, text: str, *args, **kwargs) -> LLMResult:
+    def __call__(self, text: str, qa_data: QAData, *args, **kwargs) -> LLMResult:
         if self.cfg.system_prompt is None:
             prompt = text
         else:
@@ -84,5 +90,7 @@ class TransformersLLM(LLM):
             ]
         output = self.llm(prompt, **self.cfg.generation_params)
         if self.cfg.system_prompt is None:
-            return LLMResult(output[0]['generated_text'])
-        return LLMResult(output[0]['generated_text'][-1]["content"])
+            generated_text = output[0]['generated_text']
+        else:
+            generated_text = output[0]['generated_text'][-1]["content"]
+        return LLMResult(generated_text, self.parser(generated_text, qa_data))
