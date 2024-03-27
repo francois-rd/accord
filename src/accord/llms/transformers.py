@@ -62,7 +62,7 @@ class TransformersLLM(LLM):
         self.cfg = cfg
 
         # Quantization.
-        model_params = self.cfg.model_params
+        model_params = {**self.cfg.model_params}  # Convert OmegaConf -> dict
         if self.cfg.quantization is not None:
             if self.cfg.quantization == "8bit":
                 bnb_config = BitsAndBytesConfig(load_in_8bit=True)
@@ -96,8 +96,5 @@ class TransformersLLM(LLM):
         else:
             prompt = text
         output = self.llm(prompt, **self.cfg.generation_params)
-        if self.cfg.use_chat_template:
-            generated_text = output[0]['generated_text'][-1]["content"]
-        else:
-            generated_text = output[0]['generated_text']
+        generated_text = output[0]['generated_text']
         return LLMResult(generated_text, self.parser(generated_text, qa_data))
