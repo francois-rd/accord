@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 import re
 
 from ..base import Label, QAData, QAGroupId
@@ -61,9 +61,12 @@ class ExactMatchLLMOutputParser(LLMOutputParser):
 
 
 class SimpleLLMOutputParser(LLMOutputParser):
-    def __init__(self, simple_pattern: str = r"Answer:\s*(\w+)", flags=None):
-        self.pattern_parser = PatternMatchLLMOutputParser(simple_pattern, flags=flags)
-        self.exact_parser = ExactMatchLLMOutputParser()
+    default_patterns: List[str] = [r"Answer:\s*(\w+)", r"(\w+):"]
+
+    def __init__(self, patterns: List[str] = None):
+        patterns = self.default_patterns if patterns is None else patterns
+        self.parsers = [ExactMatchLLMOutputParser()]
+        self.parsers.extend([PatternMatchLLMOutputParser(p) for p in patterns])
 
     def __call__(
         self,
@@ -72,10 +75,11 @@ class SimpleLLMOutputParser(LLMOutputParser):
         *args,
         **kwargs,
     ) -> Optional[Label]:
-        label = self.exact_parser(generated_text, qa_data, *args, **kwargs)
-        if label is None:
-            return self.pattern_parser(generated_text, qa_data, *args, **kwargs)
-        return label
+        for parser in self.parsers:
+            label = parser(generated_text, qa_data, *args, **kwargs)
+            if label is not None:
+                return label
+        return None
 
 
 class LLM:
