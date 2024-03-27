@@ -10,9 +10,11 @@ class TransformersConfig:
     # RNG seed for replication of results.
     seed: int = 314159
 
-    # The prompt for system instructions, or None for model that don't support the
-    # transformers.Pipeline chat templating functionality.
+    # The prompt for system instructions, or None for model that don't support one.
     system_prompt: Optional[str] = None
+
+    # Whether to use the transformers.Pipeline chat templating functionality.
+    use_chat_template: bool = False
 
     # Model quantization options for bitsandbytes.
     quantization: Optional[str] = None
@@ -83,16 +85,19 @@ class TransformersLLM(LLM):
         )
 
     def __call__(self, text: str, qa_data: QAData, *args, **kwargs) -> LLMResult:
-        if self.cfg.system_prompt is None:
+        if self.cfg.use_chat_template:
+            if self.cfg.system_prompt is None:
+                prompt = [{"role": "user", "content": text}]
+            else:
+                prompt = [
+                    {"role": "system", "content": self.cfg.system_prompt},
+                    {"role": "user", "content": text},
+                ]
+        else:
             prompt = text
-        else:
-            prompt = [
-                {"role": "system", "content": self.cfg.system_prompt},
-                {"role": "user", "content": text}
-            ]
         output = self.llm(prompt, **self.cfg.generation_params)
-        if self.cfg.system_prompt is None:
-            generated_text = output[0]['generated_text']
-        else:
+        if self.cfg.use_chat_template:
             generated_text = output[0]['generated_text'][-1]["content"]
+        else:
+            generated_text = output[0]['generated_text']
         return LLMResult(generated_text, self.parser(generated_text, qa_data))
