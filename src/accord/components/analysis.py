@@ -15,6 +15,7 @@ class BinType(Enum):
 class TableType(Enum):
     ACCURACY = "ACCURACY"
     AF_CONFUSION = "AF_CONFUSION"  # NOTE: This is NOT exactly a confusion matrix.
+    FAILED = "FAILED"
 
 
 @dataclass
@@ -178,10 +179,37 @@ def af_confusion(table: AnalysisTable, results: AnalysisResults) -> AnalysisTabl
     return table
 
 
+def failed(table: AnalysisTable, results: AnalysisResults) -> AnalysisTable:
+    def fails(labels, condition):
+        score, count = 0, 0
+        for r in labels:
+            if condition(r.chosen_answer_label, r.correct_answer_label):
+                if r.generated_answer_label is None:
+                    score += 1
+                count += 1
+        return score / count
+
+    def f_fails(labels):
+        return fails(labels, lambda x, y: x == y)
+
+    def af_fails(labels):
+        return fails(labels, lambda x, y: x != y)
+
+    for data_bin, label_results in results.items():
+        if data_bin == -1:
+            table.baseline = f_fails(label_results)
+        else:
+            table.data.setdefault("f_fails", {})[data_bin] = f_fails(label_results)
+            table.data.setdefault("af_fails", {})[data_bin] = af_fails(label_results)
+    return table
+
+
 def to_table(table: AnalysisTable, analyses: List[Analysis]) -> AnalysisTable:
     if table.table_type == TableType.ACCURACY:
         return accuracy(table, collate_results(analyses))
     elif table.table_type == TableType.AF_CONFUSION:
         return af_confusion(table, collate_results(analyses))
+    elif table.table_type == TableType.FAILED:
+        return failed(table, collate_results(analyses))
     else:
         raise ValueError(f"Unsupported TableType: {table.table_type}")
