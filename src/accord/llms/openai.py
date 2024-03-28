@@ -36,7 +36,7 @@ class OpenAILLM(LLM):
         self.cfg = cfg
         self.llm = OpenAI(api_key=os.environ["OPENAI_API_KEY"]).chat.completions.create
 
-    @retry(tries=2, delay=1)
+    @retry(delay=1)
     def __call__(self, text: str, qa_data: QAData, *args, **kwargs) -> LLMResult:
         response = self.llm(
             model=self.model_name,
