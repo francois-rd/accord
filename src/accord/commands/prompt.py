@@ -1,5 +1,6 @@
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 from copy import deepcopy
+import random
 
 from tqdm import tqdm
 
@@ -13,6 +14,7 @@ from .configs import (
 from ..base import (
     InstantiationData,
     InstantiationForest,
+    Label,
     QAData,
     QAGroup,
     QAPrompt,
@@ -136,12 +138,8 @@ def factory(
             disable = not self.general.verbose
             for qa_data in tqdm(qa_dataset_loader(), desc="Progress", disable=disable):
                 with update(self.resources, qa_data) as resources:
-                    prompt = QAPrompt(qa_data, None)
-                    text = self.surfacer(prompt, qa_data.correct_answer_label)
-                    result = self.llm(text, qa_data)
-                    # TODO: Too much room on disk to store as text. Revisit later.
-                    # result.prompt_text = text
-                    result.chosen_answer_label = qa_data.correct_answer_label
+                    label = qa_data.correct_answer_label
+                    result = self._prompt(label, QAPrompt(qa_data, None), qa_data)
                     save_dataclass_jsonl(resources.llm_results_file, *[result])
 
         def _run_tree_size_1(self):
@@ -175,15 +173,9 @@ def factory(
                 groups.append(group)
                 self.group_id_counter += 1
 
-                # For each answer choice, query the LLM with the QAPrompt.
-                for chosen_answer_label in qa_data.answer_choices:
-                    text = self.surfacer(prompt, chosen_answer_label)
-                    result = self.llm(text, qa_data)
-                    # TODO: Too much room on disk to store as text. Revisit later.
-                    # result.prompt_text = text
-                    result.chosen_answer_label = chosen_answer_label
-                    result.qa_group_id = group.identifier
-                    results.append(result)
+                # For each kept answer choice, query the LLM with the QAPrompt.
+                for label in self._choose_labels(qa_data):
+                    results.append(self._prompt(label, prompt, qa_data, group))
             return groups, results
 
         def _run_other_tree_size(self):
@@ -225,15 +217,36 @@ def factory(
                     continue
                 prompt = QAPrompt(qa_data, tree_map)
 
-                # For each possible answer choice, query the LLM with the QAPrompt.
-                for chosen_answer_label in qa_data.answer_choices:
-                    text = self.surfacer(prompt, chosen_answer_label)
-                    result = self.llm(text, qa_data)
-                    # TODO: Too much room on disk to store as text. Revisit later.
-                    # result.prompt_text = text
-                    result.chosen_answer_label = chosen_answer_label
-                    result.qa_group_id = group.identifier
-                    yield result
+                # For each kept answer choice, query the LLM with the QAPrompt.
+                for chosen_answer_label in self._choose_labels(qa_data):
+                    yield self._prompt(chosen_answer_label, prompt, qa_data, group)
+
+        def _choose_labels(self, qa_data: QAData) -> Iterable[Label]:
+            keep, others = [], []
+            for label in qa_data.answer_choices:
+                if label == qa_data.correct_answer_label:
+                    keep.append(label)
+                else:
+                    others.append(label)
+            keep.extend(random.sample(others, self.filter_cfg.num_anti_factual_answers))
+            for label in keep:
+                yield label
+
+        def _prompt(
+            self,
+            chosen_answer_label: Label,
+            prompt: QAPrompt,
+            qa_data: QAData,
+            group: Optional[QAGroup] = None,
+        ) -> LLMResult:
+            text = self.surfacer(prompt, chosen_answer_label)
+            result = self.llm(text, qa_data)
+            # TODO: Too much room on disk to store as text. Revisit later.
+            # result.prompt_text = text
+            result.chosen_answer_label = chosen_answer_label
+            if group is not None:
+                result.qa_group_id = group.identifier
+            return result
 
         def run(self):
             if self.resources.tree_size == 0:

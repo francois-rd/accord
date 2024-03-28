@@ -102,6 +102,7 @@ class FilterConfig:
     pairing_prob: float = 0.0
     anti_factual_prob: float = 0.0
     prompt_probs: dict = field(default_factory=dict)
+    num_anti_factual_answers: int = 1
 
 
 @dataclass
