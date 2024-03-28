@@ -20,6 +20,7 @@ from .analysis import (
     distractors,
     find_group,
     reasoning_hops,
+    safe_div,
     to_table,
     tree_size,
 )

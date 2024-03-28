@@ -120,6 +120,10 @@ def collate_results(analyses: List[Analysis]) -> AnalysisResults:
     return results
 
 
+def safe_div(score, count, zero_div=-1.0):
+    return zero_div if count == 0 else score / count
+
+
 def accuracy(table: AnalysisTable, results: AnalysisResults) -> AnalysisTable:
     def acc(labels, condition):
         score, count = 0, 0
@@ -128,7 +132,7 @@ def accuracy(table: AnalysisTable, results: AnalysisResults) -> AnalysisTable:
                 if r.generated_answer_label == r.chosen_answer_label:
                     score += 1
                 count += 1
-        return score / count
+        return safe_div(score, count)
 
     def f_acc(labels):
         return acc(labels, lambda x, y: x == y)
@@ -163,8 +167,8 @@ def af_confusion(table: AnalysisTable, results: AnalysisResults) -> AnalysisTabl
                     af_llm_af_gt += 1
                 af_gt += 1
         return (
-            f_llm_f_gt / f_gt, af_llm_f_gt / f_gt,
-            f_llm_af_gt / af_gt, af_llm_af_gt / af_gt,
+            safe_div(f_llm_f_gt, f_gt), safe_div(af_llm_f_gt, f_gt),
+            safe_div(f_llm_af_gt, af_gt), safe_div(af_llm_af_gt, af_gt),
         )
 
     for data_bin, result in results.items():
